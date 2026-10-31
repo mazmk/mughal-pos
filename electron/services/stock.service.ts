@@ -13,16 +13,16 @@ export interface StockMovementInput {
   productId: number;
   reason: StockMovementReason;
   quantity: number;
-  unitCost?: number;
-  referenceType?: string;
-  referenceId?: number;
-  note?: string;
+  unitCost?: number | null;
+  referenceType?: string | null;
+  referenceId?: number | null;
+  note?: string | null;
 }
 
-export function recordMovement(input: StockMovementInput): void {
+export function recordMovement(input: StockMovementInput): number {
   const db = getDatabase();
 
-  const tx = db.transaction((m: StockMovementInput) => {
+  const tx = db.transaction((m: StockMovementInput): number => {
     const product = db
       .prepare(`SELECT stock_on_hand FROM products WHERE id = ?`)
       .get(m.productId) as { stock_on_hand: number } | undefined;
@@ -38,28 +38,32 @@ export function recordMovement(input: StockMovementInput): void {
       );
     }
 
-    db.prepare(
-      `INSERT INTO stock_movements
-         (product_id, reason, quantity, unit_cost, reference_type, reference_id, note)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
-    ).run(
-      m.productId,
-      m.reason,
-      m.quantity,
-      m.unitCost ?? null,
-      m.referenceType ?? null,
-      m.referenceId ?? null,
-      m.note ?? null
-    );
+    const result = db
+      .prepare(
+        `INSERT INTO stock_movements
+           (product_id, reason, quantity, unit_cost, reference_type, reference_id, note)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        m.productId,
+        m.reason,
+        m.quantity,
+        m.unitCost ?? null,
+        m.referenceType ?? null,
+        m.referenceId ?? null,
+        m.note ?? null
+      );
 
     db.prepare(
       `UPDATE products
          SET stock_on_hand = ?, updated_at = datetime('now')
        WHERE id = ?`
     ).run(next, m.productId);
+
+    return Number(result.lastInsertRowid);
   });
 
-  tx(input);
+  return tx(input);
 }
 
 /**

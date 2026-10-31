@@ -1,10 +1,190 @@
-import { Component } from '@angular/core';
-import { PlaceholderPageComponent } from '../../shared/components/placeholder-page/placeholder-page.component';
+import { CommonModule } from '@angular/common';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatDialog } from '@angular/material/dialog';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
+import { MatSnackBar } from '@angular/material/snack-bar';
+import type {
+  NewSaleItem,
+  PaymentMethod,
+  Product,
+} from '../../../../shared/ipc-types';
+import { ProductsService } from '../../core/services/products.service';
+import { SalesService } from '../../core/services/sales.service';
+import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
+import { MoneyPipe } from '../../shared/pipes/money.pipe';
+
+interface CartLine {
+  product: Product;
+  quantity: number;
+}
 
 @Component({
   selector: 'app-pos-page',
   standalone: true,
-  imports: [PlaceholderPageComponent],
-  template: `<app-placeholder-page title="Point of Sale" subtitle="Scan, add items to a cart, and complete a sale." icon="point_of_sale" />`,
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatCardModule,
+    MatButtonModule,
+    MatIconModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    MatChipsModule,
+    MatProgressSpinnerModule,
+    MoneyPipe,
+  ],
+  templateUrl: './pos.page.html',
+  styleUrl: './pos.page.scss',
 })
-export class PosPage {}
+export class PosPage implements OnInit {
+  readonly products = inject(ProductsService);
+  readonly sales = inject(SalesService);
+  private readonly snack = inject(MatSnackBar);
+  private readonly dialog = inject(MatDialog);
+
+  readonly search = signal('');
+  readonly cart = signal<CartLine[]>([]);
+  readonly discount = signal(0);
+  readonly paymentMethod = signal<PaymentMethod>('cash');
+  readonly notes = signal('');
+  readonly submitting = signal(false);
+
+  readonly paymentOptions: readonly { value: PaymentMethod; label: string; icon: string }[] = [
+    { value: 'cash', label: 'Cash', icon: 'payments' },
+    { value: 'card', label: 'Card', icon: 'credit_card' },
+    { value: 'credit', label: 'Credit', icon: 'account_balance_wallet' },
+    { value: 'other', label: 'Other', icon: 'more_horiz' },
+  ];
+
+  readonly filteredProducts = computed(() => {
+    const q = this.search().trim().toLowerCase();
+    const items = this.products.active();
+    if (!q) return items.slice(0, 100);
+    return items
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.sku.toLowerCase().includes(q) ||
+          (p.barcode?.toLowerCase().includes(q) ?? false)
+      )
+      .slice(0, 100);
+  });
+
+  readonly subtotal = computed(() =>
+    this.cart().reduce((sum, l) => sum + l.product.unitPrice * l.quantity, 0)
+  );
+  readonly tax = computed(() =>
+    this.cart().reduce((sum, l) => sum + l.product.unitPrice * l.quantity * l.product.taxRate, 0)
+  );
+  readonly total = computed(() =>
+    Math.max(0, this.subtotal() + this.tax() - this.discount())
+  );
+
+  async ngOnInit(): Promise<void> {
+    await this.products.refresh();
+  }
+
+  addToCart(product: Product): void {
+    const current = this.cart();
+    const existing = current.find((l) => l.product.id === product.id);
+    const nextQty = (existing?.quantity ?? 0) + 1;
+    if (nextQty > product.stockOnHand) {
+      this.snack.open(
+        `Only ${product.stockOnHand} of "${product.name}" in stock`,
+        'OK',
+        { duration: 2500 }
+      );
+      return;
+    }
+    if (existing) {
+      this.cart.set(current.map((l) => (l === existing ? { ...l, quantity: nextQty } : l)));
+    } else {
+      this.cart.set([...current, { product, quantity: 1 }]);
+    }
+  }
+
+  changeQuantity(line: CartLine, delta: number): void {
+    const next = line.quantity + delta;
+    if (next <= 0) {
+      this.remove(line);
+      return;
+    }
+    if (next > line.product.stockOnHand) {
+      this.snack.open(`Max stock reached (${line.product.stockOnHand})`, 'OK', { duration: 2000 });
+      return;
+    }
+    this.cart.set(this.cart().map((l) => (l === line ? { ...l, quantity: next } : l)));
+  }
+
+  remove(line: CartLine): void {
+    this.cart.set(this.cart().filter((l) => l !== line));
+  }
+
+  clear(): void {
+    this.cart.set([]);
+    this.discount.set(0);
+    this.notes.set('');
+  }
+
+  async checkout(): Promise<void> {
+    if (this.cart().length === 0) return;
+
+    const ref = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Complete sale?',
+        message: `${this.cart().length} line(s), total ${this.formatTotal()}.`,
+        confirmLabel: 'Complete sale',
+      },
+    });
+    const ok = await new Promise<boolean>((resolve) =>
+      ref.afterClosed().subscribe((v) => resolve(Boolean(v)))
+    );
+    if (!ok) return;
+
+    const items: NewSaleItem[] = this.cart().map((l) => ({
+      productId: l.product.id,
+      quantity: l.quantity,
+      unitPrice: l.product.unitPrice,
+      taxRate: l.product.taxRate,
+    }));
+
+    this.submitting.set(true);
+    try {
+      const sale = await this.sales.create({
+        paymentMethod: this.paymentMethod(),
+        discountAmount: Number(this.discount()) || 0,
+        notes: this.notes().trim() || null,
+        items,
+      });
+      this.snack.open(`Sale ${sale.reference} completed`, 'OK', { duration: 3000 });
+      this.clear();
+      await this.products.refresh();
+    } catch (err) {
+      this.snack.open(err instanceof Error ? err.message : String(err), 'Dismiss', {
+        duration: 5000,
+      });
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  private formatTotal(): string {
+    try {
+      return new Intl.NumberFormat('en-PK', {
+        style: 'currency',
+        currency: 'PKR',
+      }).format(this.total());
+    } catch {
+      return this.total().toFixed(2);
+    }
+  }
+}

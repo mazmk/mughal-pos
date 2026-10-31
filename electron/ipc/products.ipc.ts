@@ -59,4 +59,6 @@ export function registerProductsIpc(): void {
   handle<[number], { id: number }>(IPC_CHANNELS.products.remove, (_e, id) =>
     productsRepository.remove(assertNumber(id, 'id'))
   );
+
+  handle<[], Product[]>(IPC_CHANNELS.products.lowStock, () => productsRepository.lowStock());
 }

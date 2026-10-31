@@ -1,0 +1,108 @@
+<div class="flex flex-col gap-6">
+  <header>
+    <h1 class="m-0 text-2xl font-semibold tracking-tight">Sales</h1>
+    <p class="m-0 mt-1 text-sm opacity-70">Historical sales and voids.</p>
+  </header>
+
+  <mat-card appearance="outlined" class="!rounded-xl">
+    <mat-card-content class="!p-0">
+      @if (svc.loading()) {
+        <div class="flex items-center justify-center p-10">
+          <mat-spinner diameter="32" />
+        </div>
+      } @else if (svc.items().length === 0) {
+        <div class="flex flex-col items-center gap-2 p-10 text-center opacity-70">
+          <mat-icon class="!h-10 !w-10 !text-4xl">receipt_long</mat-icon>
+          <p class="m-0">No sales recorded yet. Head to POS to make the first one.</p>
+        </div>
+      } @else {
+        <table mat-table [dataSource]="svc.items()" class="!w-full">
+          <ng-container matColumnDef="soldAt">
+            <th mat-header-cell *matHeaderCellDef>When</th>
+            <td mat-cell *matCellDef="let s">{{ s.soldAt | date: 'short' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="reference">
+            <th mat-header-cell *matHeaderCellDef>Reference</th>
+            <td mat-cell *matCellDef="let s" class="!font-mono !text-xs">{{ s.reference }}</td>
+          </ng-container>
+          <ng-container matColumnDef="items">
+            <th mat-header-cell *matHeaderCellDef class="!text-right">Lines</th>
+            <td mat-cell *matCellDef="let s" class="!text-right">{{ s.items.length }}</td>
+          </ng-container>
+          <ng-container matColumnDef="payment">
+            <th mat-header-cell *matHeaderCellDef>Payment</th>
+            <td mat-cell *matCellDef="let s">{{ s.paymentMethod | titlecase }}</td>
+          </ng-container>
+          <ng-container matColumnDef="total">
+            <th mat-header-cell *matHeaderCellDef class="!text-right">Total</th>
+            <td mat-cell *matCellDef="let s" class="!text-right !font-medium">{{ s.totalAmount | money }}</td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let s">
+              @switch (s.status) {
+                @case ('completed') { <mat-chip highlighted color="primary">Completed</mat-chip> }
+                @case ('voided') { <mat-chip highlighted color="warn">Voided</mat-chip> }
+                @case ('refunded') { <mat-chip highlighted>Refunded</mat-chip> }
+              }
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef class="!text-right"></th>
+            <td mat-cell *matCellDef="let s" class="!text-right">
+              <button mat-icon-button (click)="toggle(s.id)" matTooltip="Details">
+                <mat-icon>{{ expandedId() === s.id ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+              @if (s.status === 'completed') {
+                <button mat-icon-button (click)="voidSale(s)" matTooltip="Void">
+                  <mat-icon>cancel</mat-icon>
+                </button>
+              }
+            </td>
+          </ng-container>
+
+          <ng-container matColumnDef="detail">
+            <td mat-cell *matCellDef="let s" [attr.colspan]="columns.length">
+              @if (expandedId() === s.id) {
+                <div class="p-4 flex flex-col gap-2 bg-surface-variant">
+                  <div class="grid gap-2 sm:grid-cols-4 text-sm">
+                    <div><strong>Subtotal:</strong> {{ (s.totalAmount - s.taxAmount + s.discountAmount) | money }}</div>
+                    <div><strong>Tax:</strong> {{ s.taxAmount | money }}</div>
+                    <div><strong>Discount:</strong> {{ s.discountAmount | money }}</div>
+                    <div><strong>Total:</strong> {{ s.totalAmount | money }}</div>
+                  </div>
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr class="text-left opacity-70">
+                        <th class="py-1">SKU</th>
+                        <th>Product</th>
+                        <th class="text-right">Qty</th>
+                        <th class="text-right">Unit</th>
+                        <th class="text-right">Line</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (item of s.items; track item.id) {
+                        <tr>
+                          <td class="font-mono text-xs py-1">{{ item.productSku }}</td>
+                          <td>{{ item.productName }}</td>
+                          <td class="text-right">{{ item.quantity }}</td>
+                          <td class="text-right">{{ item.unitPrice | money }}</td>
+                          <td class="text-right">{{ item.lineTotal | money }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: ['detail']" class="!h-auto !border-0"></tr>
+        </table>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

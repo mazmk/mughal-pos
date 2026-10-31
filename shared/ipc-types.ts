@@ -40,11 +40,52 @@ export interface HealthStatus {
   userDataPath: string;
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Settings                                                                   */
+/* -------------------------------------------------------------------------- */
+
 export interface Setting {
   key: string;
   value: string;
   updatedAt: string;
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Categories                                                                 */
+/* -------------------------------------------------------------------------- */
+
+export interface Category {
+  id: number;
+  name: string;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+export type NewCategory = Omit<Category, 'id' | 'createdAt' | 'updatedAt'>;
+export type CategoryPatch = Partial<NewCategory>;
+
+/* -------------------------------------------------------------------------- */
+/*  Suppliers                                                                  */
+/* -------------------------------------------------------------------------- */
+
+export interface Supplier {
+  id: number;
+  name: string;
+  contactName: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  notes: string | null;
+  isActive: 0 | 1;
+  createdAt: string;
+  updatedAt: string;
+}
+export type NewSupplier = Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>;
+export type SupplierPatch = Partial<NewSupplier>;
+
+/* -------------------------------------------------------------------------- */
+/*  Products                                                                   */
+/* -------------------------------------------------------------------------- */
 
 export interface Product {
   id: number;
@@ -66,6 +107,10 @@ export interface Product {
 export type NewProduct = Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'stockOnHand'>;
 export type ProductPatch = Partial<Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'stockOnHand'>>;
 
+/* -------------------------------------------------------------------------- */
+/*  Stock                                                                      */
+/* -------------------------------------------------------------------------- */
+
 export type StockMovementReason =
   | 'opening'
   | 'sale'
@@ -73,3 +118,166 @@ export type StockMovementReason =
   | 'damage'
   | 'adjustment'
   | 'return';
+
+export interface StockMovement {
+  id: number;
+  productId: number;
+  productName: string;
+  productSku: string;
+  reason: StockMovementReason;
+  quantity: number;
+  unitCost: number | null;
+  referenceType: string | null;
+  referenceId: number | null;
+  note: string | null;
+  occurredAt: string;
+  createdAt: string;
+}
+
+export interface NewStockMovement {
+  productId: number;
+  reason: StockMovementReason;
+  quantity: number;
+  unitCost?: number | null;
+  note?: string | null;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Purchases                                                                  */
+/* -------------------------------------------------------------------------- */
+
+export type PurchaseStatus = 'draft' | 'received' | 'cancelled';
+
+export interface PurchaseItem {
+  id: number;
+  purchaseId: number;
+  productId: number;
+  productName: string;
+  productSku: string;
+  quantity: number;
+  unitCost: number;
+  lineTotal: number;
+}
+
+export interface Purchase {
+  id: number;
+  supplierId: number | null;
+  supplierName: string | null;
+  reference: string | null;
+  totalAmount: number;
+  status: PurchaseStatus;
+  purchasedAt: string;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items: PurchaseItem[];
+}
+
+export interface NewPurchaseItem {
+  productId: number;
+  quantity: number;
+  unitCost: number;
+}
+
+export interface NewPurchase {
+  supplierId: number | null;
+  reference: string | null;
+  purchasedAt: string;
+  notes: string | null;
+  items: NewPurchaseItem[];
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Sales                                                                      */
+/* -------------------------------------------------------------------------- */
+
+export type PaymentMethod = 'cash' | 'card' | 'credit' | 'other';
+export type SaleStatus = 'completed' | 'voided' | 'refunded';
+
+export interface SaleItem {
+  id: number;
+  saleId: number;
+  productId: number;
+  productName: string;
+  productSku: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+  taxRate: number;
+}
+
+export interface Sale {
+  id: number;
+  reference: string;
+  totalAmount: number;
+  taxAmount: number;
+  discountAmount: number;
+  paymentMethod: PaymentMethod;
+  status: SaleStatus;
+  soldAt: string;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  items: SaleItem[];
+}
+
+export interface NewSaleItem {
+  productId: number;
+  quantity: number;
+  unitPrice: number;
+  taxRate?: number;
+}
+
+export interface NewSale {
+  paymentMethod: PaymentMethod;
+  discountAmount: number;
+  notes: string | null;
+  items: NewSaleItem[];
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Dashboard + Reports                                                        */
+/* -------------------------------------------------------------------------- */
+
+export interface DashboardMetrics {
+  todaySalesAmount: number;
+  todaySalesCount: number;
+  totalProducts: number;
+  lowStockProducts: number;
+  inventoryValue: number;
+  activeCategories: number;
+  activeSuppliers: number;
+}
+
+export interface SalesReportRow {
+  bucket: string;
+  salesCount: number;
+  totalAmount: number;
+  taxAmount: number;
+  discountAmount: number;
+}
+
+export interface TopProductRow {
+  productId: number;
+  productName: string;
+  productSku: string;
+  quantitySold: number;
+  revenue: number;
+}
+
+export interface ReportRange {
+  from: string;
+  to: string;
+  granularity: 'day' | 'week' | 'month';
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Backup                                                                     */
+/* -------------------------------------------------------------------------- */
+
+export interface BackupInfo {
+  filename: string;
+  path: string;
+  sizeBytes: number;
+  createdAt: string;
+}

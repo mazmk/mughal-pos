@@ -1,0 +1,8 @@
+:host {
+  display: block;
+}
+
+.\!border-primary {
+  border-color: var(--mat-sys-primary) !important;
+  color: var(--mat-sys-primary) !important;
+}

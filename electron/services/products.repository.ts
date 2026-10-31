@@ -123,4 +123,15 @@ export const productsRepository = {
     getDatabase().prepare(`DELETE FROM products WHERE id = ?`).run(id);
     return { id };
   },
+
+  lowStock(): Product[] {
+    const rows = getDatabase()
+      .prepare(
+        `SELECT * FROM products
+         WHERE is_active = 1 AND reorder_level > 0 AND stock_on_hand <= reorder_level
+         ORDER BY (stock_on_hand - reorder_level), name COLLATE NOCASE`
+      )
+      .all() as ProductRow[];
+    return rows.map(toProduct);
+  },
 };

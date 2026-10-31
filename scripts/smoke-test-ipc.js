@@ -63,9 +63,17 @@ app.whenReady().then(async () => {
 const probeFile = path.join(projectRoot, '.probe.main.js');
 fs.writeFileSync(probeFile, probe);
 
+// Scrub ELECTRON_RUN_AS_NODE from the env — if present (e.g. inherited from a
+// VS Code / Cursor terminal that runs its own Electron bundle), it forces this
+// Electron to boot as plain Node and require('electron') returns a string
+// instead of the API object. The main process would then crash on app.on().
+const cleanEnv = { ...process.env, NODE_ENV: 'production' };
+delete cleanEnv.ELECTRON_RUN_AS_NODE;
+delete cleanEnv.ELECTRON_NO_ATTACH_CONSOLE;
+
 const child = spawn(electronBin, [probeFile], {
   cwd: projectRoot,
-  env: { ...process.env, NODE_ENV: 'production' },
+  env: cleanEnv,
   stdio: 'inherit',
 });
 

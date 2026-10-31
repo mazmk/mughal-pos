@@ -1,0 +1,134 @@
+<div class="flex flex-col gap-6">
+  <header>
+    <h1 class="m-0 text-2xl font-semibold tracking-tight">Reports</h1>
+    <p class="m-0 mt-1 text-sm opacity-70">Sales performance over a chosen date range.</p>
+  </header>
+
+  <mat-card appearance="outlined" class="!rounded-xl">
+    <mat-card-content class="flex flex-wrap items-end gap-3 pt-4">
+      <mat-form-field appearance="outline">
+        <mat-label>From</mat-label>
+        <input matInput [matDatepicker]="dpFrom" [ngModel]="from()" (ngModelChange)="from.set($event)" />
+        <mat-datepicker-toggle matIconSuffix [for]="dpFrom"></mat-datepicker-toggle>
+        <mat-datepicker #dpFrom></mat-datepicker>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>To</mat-label>
+        <input matInput [matDatepicker]="dpTo" [ngModel]="to()" (ngModelChange)="to.set($event)" />
+        <mat-datepicker-toggle matIconSuffix [for]="dpTo"></mat-datepicker-toggle>
+        <mat-datepicker #dpTo></mat-datepicker>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Granularity</mat-label>
+        <mat-select [ngModel]="granularity()" (ngModelChange)="granularity.set($event)">
+          <mat-option value="day">Daily</mat-option>
+          <mat-option value="week">Weekly</mat-option>
+          <mat-option value="month">Monthly</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <button mat-flat-button color="primary" (click)="run()">
+        <mat-icon>analytics</mat-icon>
+        Run report
+      </button>
+    </mat-card-content>
+  </mat-card>
+
+  <section class="grid gap-4 grid-cols-2 xl:grid-cols-4">
+    <mat-card appearance="outlined" class="!rounded-xl">
+      <mat-card-content class="flex flex-col gap-1 !p-5">
+        <span class="text-xs uppercase tracking-wide opacity-70">Sales</span>
+        <span class="text-2xl font-semibold">{{ totals().sales }}</span>
+      </mat-card-content>
+    </mat-card>
+    <mat-card appearance="outlined" class="!rounded-xl">
+      <mat-card-content class="flex flex-col gap-1 !p-5">
+        <span class="text-xs uppercase tracking-wide opacity-70">Revenue</span>
+        <span class="text-2xl font-semibold">{{ totals().revenue | money }}</span>
+      </mat-card-content>
+    </mat-card>
+    <mat-card appearance="outlined" class="!rounded-xl">
+      <mat-card-content class="flex flex-col gap-1 !p-5">
+        <span class="text-xs uppercase tracking-wide opacity-70">Tax</span>
+        <span class="text-2xl font-semibold">{{ totals().tax | money }}</span>
+      </mat-card-content>
+    </mat-card>
+    <mat-card appearance="outlined" class="!rounded-xl">
+      <mat-card-content class="flex flex-col gap-1 !p-5">
+        <span class="text-xs uppercase tracking-wide opacity-70">Discounts</span>
+        <span class="text-2xl font-semibold">{{ totals().discount | money }}</span>
+      </mat-card-content>
+    </mat-card>
+  </section>
+
+  <mat-card appearance="outlined" class="!rounded-xl">
+    <mat-card-header>
+      <mat-card-title class="!text-base !font-semibold">Sales over time</mat-card-title>
+    </mat-card-header>
+    <mat-card-content class="!p-0">
+      @if (loading()) {
+        <div class="flex items-center justify-center p-10">
+          <mat-spinner diameter="32" />
+        </div>
+      } @else if (rows().length === 0) {
+        <div class="p-10 text-center opacity-70">No completed sales in this range.</div>
+      } @else {
+        <table mat-table [dataSource]="rows()" class="!w-full">
+          <ng-container matColumnDef="bucket">
+            <th mat-header-cell *matHeaderCellDef>Period</th>
+            <td mat-cell *matCellDef="let r" class="!font-mono !text-xs">{{ r.bucket }}</td>
+          </ng-container>
+          <ng-container matColumnDef="salesCount">
+            <th mat-header-cell *matHeaderCellDef class="!text-right">Sales</th>
+            <td mat-cell *matCellDef="let r" class="!text-right">{{ r.salesCount }}</td>
+          </ng-container>
+          <ng-container matColumnDef="totalAmount">
+            <th mat-header-cell *matHeaderCellDef class="!text-right">Revenue</th>
+            <td mat-cell *matCellDef="let r" class="!text-right !font-medium">{{ r.totalAmount | money }}</td>
+          </ng-container>
+          <ng-container matColumnDef="taxAmount">
+            <th mat-header-cell *matHeaderCellDef class="!text-right">Tax</th>
+            <td mat-cell *matCellDef="let r" class="!text-right">{{ r.taxAmount | money }}</td>
+          </ng-container>
+          <ng-container matColumnDef="discountAmount">
+            <th mat-header-cell *matHeaderCellDef class="!text-right">Discount</th>
+            <td mat-cell *matCellDef="let r" class="!text-right">{{ r.discountAmount | money }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="salesColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: salesColumns"></tr>
+        </table>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card appearance="outlined" class="!rounded-xl">
+    <mat-card-header>
+      <mat-card-title class="!text-base !font-semibold">Top products</mat-card-title>
+    </mat-card-header>
+    <mat-card-content class="!p-0">
+      @if (top().length === 0) {
+        <div class="p-10 text-center opacity-70">No items sold in this range.</div>
+      } @else {
+        <table mat-table [dataSource]="top()" class="!w-full">
+          <ng-container matColumnDef="sku">
+            <th mat-header-cell *matHeaderCellDef>SKU</th>
+            <td mat-cell *matCellDef="let r" class="!font-mono !text-xs">{{ r.productSku }}</td>
+          </ng-container>
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef>Product</th>
+            <td mat-cell *matCellDef="let r" class="!font-medium">{{ r.productName }}</td>
+          </ng-container>
+          <ng-container matColumnDef="quantitySold">
+            <th mat-header-cell *matHeaderCellDef class="!text-right">Units sold</th>
+            <td mat-cell *matCellDef="let r" class="!text-right">{{ r.quantitySold }}</td>
+          </ng-container>
+          <ng-container matColumnDef="revenue">
+            <th mat-header-cell *matHeaderCellDef class="!text-right">Revenue</th>
+            <td mat-cell *matCellDef="let r" class="!text-right !font-medium">{{ r.revenue | money }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="topColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: topColumns"></tr>
+        </table>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

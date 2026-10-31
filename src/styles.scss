@@ -23,3 +23,11 @@ body {
   --app-sidebar-width: 240px;
   --app-toolbar-height: 56px;
 }
+
+/* Global Material surface utilities so Tailwind classes can tint using M3 tokens. */
+.bg-surface { background: var(--mat-sys-surface); }
+.bg-surface-variant { background: var(--mat-sys-surface-container); color: var(--mat-sys-on-surface); }
+.bg-primary-container { background: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); }
+.bg-tertiary-container { background: var(--mat-sys-tertiary-container); color: var(--mat-sys-on-tertiary-container); }
+.bg-error-container { background: var(--mat-sys-error-container); color: var(--mat-sys-on-error-container); }
+.border-outline { border-color: var(--mat-sys-outline-variant); }

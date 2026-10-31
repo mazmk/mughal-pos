@@ -1,0 +1,67 @@
+<div class="flex flex-col gap-6">
+  <header class="flex items-start justify-between gap-4">
+    <div>
+      <h1 class="m-0 text-2xl font-semibold tracking-tight">Stock movements</h1>
+      <p class="m-0 mt-1 text-sm opacity-70">
+        Immutable ledger of every stock change. Current on-hand is always derivable from this history.
+      </p>
+    </div>
+    <button mat-flat-button color="primary" (click)="record()">
+      <mat-icon>add</mat-icon>
+      Record movement
+    </button>
+  </header>
+
+  <mat-card appearance="outlined" class="!rounded-xl">
+    <mat-card-content class="!p-0">
+      @if (svc.loading()) {
+        <div class="flex items-center justify-center p-10">
+          <mat-spinner diameter="32" />
+        </div>
+      } @else if (svc.items().length === 0) {
+        <div class="flex flex-col items-center gap-2 p-10 text-center opacity-70">
+          <mat-icon class="!h-10 !w-10 !text-4xl">swap_vert</mat-icon>
+          <p class="m-0">No stock movements yet. Record opening stock to start tracking.</p>
+        </div>
+      } @else {
+        <table mat-table [dataSource]="svc.items()" class="!w-full">
+          <ng-container matColumnDef="occurredAt">
+            <th mat-header-cell *matHeaderCellDef>When</th>
+            <td mat-cell *matCellDef="let m">{{ m.occurredAt | date: 'short' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="product">
+            <th mat-header-cell *matHeaderCellDef>Product</th>
+            <td mat-cell *matCellDef="let m">
+              <span class="!font-medium">{{ m.productName }}</span>
+              <span class="opacity-60 text-xs ml-2 font-mono">{{ m.productSku }}</span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="reason">
+            <th mat-header-cell *matHeaderCellDef>Reason</th>
+            <td mat-cell *matCellDef="let m">
+              <mat-chip [color]="colorFor(m.reason)" highlighted>{{ m.reason | titlecase }}</mat-chip>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="quantity">
+            <th mat-header-cell *matHeaderCellDef class="!text-right">Qty</th>
+            <td mat-cell *matCellDef="let m" class="!text-right">
+              <span
+                [class.text-green-600]="m.quantity > 0"
+                [class.text-red-500]="m.quantity < 0"
+                class="font-semibold"
+              >
+                {{ m.quantity > 0 ? '+' : '' }}{{ m.quantity }}
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="note">
+            <th mat-header-cell *matHeaderCellDef>Note</th>
+            <td mat-cell *matCellDef="let m" class="opacity-80">{{ m.note || '—' }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns"></tr>
+        </table>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

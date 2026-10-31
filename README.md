@@ -286,6 +286,16 @@ preserves them without rewriting rows.
 
 ---
 
+## Shell environment gotcha
+
+If you run `npm run electron:dev` from a terminal spawned by VS Code / Cursor
+and the app crashes immediately with
+`TypeError: Cannot read properties of undefined (reading 'on')` from
+`main.js:… electron_1.app.on('ready')`, the parent IDE has leaked
+`ELECTRON_RUN_AS_NODE=1` into your shell. The `electron:dev` script explicitly
+clears it, but a bare `electron .` invocation in that shell won't — open a
+plain Terminal / iTerm, or run `unset ELECTRON_RUN_AS_NODE` first.
+
 ## Cross-platform limitations
 
 - **Native modules**: `better-sqlite3` ships prebuilt binaries for Electron.
@@ -316,7 +326,8 @@ preserves them without rewriting rows.
 | `npm run electron:pack`      | Unsigned, unpackaged test build for current platform     |
 | `npm run rebuild:native`     | Rebuild `better-sqlite3` against the current Electron    |
 | `npm run smoke:db`           | Headless SQLite layer smoke test                         |
-| `npm run smoke:ipc`          | End-to-end Electron + IPC smoke test                     |
+| `npm run smoke:ipc`          | Electron + IPC bridge smoke test                         |
+| `npm run smoke:full`         | End-to-end smoke: categories → sale → report → backup    |
 | `npm run format`             | Prettier format all source                               |
 
 ---

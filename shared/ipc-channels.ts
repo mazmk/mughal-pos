@@ -1,6 +1,9 @@
 /**
  * Allow-list of IPC channels. Both main and renderer import from here.
  * Keep this file free of runtime dependencies — it is shared type-only material.
+ *
+ * Preload inlines its own copy (electron/preload/preload.ts) because sandbox
+ * mode restricts require() — keep both in sync when adding channels.
  */
 export const IPC_CHANNELS = {
   health: {
@@ -11,16 +14,54 @@ export const IPC_CHANNELS = {
     set: 'settings:set',
     list: 'settings:list',
   },
+  categories: {
+    list: 'categories:list',
+    get: 'categories:get',
+    create: 'categories:create',
+    update: 'categories:update',
+    remove: 'categories:remove',
+  },
+  suppliers: {
+    list: 'suppliers:list',
+    get: 'suppliers:get',
+    create: 'suppliers:create',
+    update: 'suppliers:update',
+    remove: 'suppliers:remove',
+  },
   products: {
     list: 'products:list',
     get: 'products:get',
     create: 'products:create',
     update: 'products:update',
     remove: 'products:remove',
+    lowStock: 'products:low-stock',
+  },
+  stock: {
+    list: 'stock:list',
+    adjust: 'stock:adjust',
+  },
+  purchases: {
+    list: 'purchases:list',
+    get: 'purchases:get',
+    create: 'purchases:create',
+    receive: 'purchases:receive',
+    cancel: 'purchases:cancel',
+  },
+  sales: {
+    list: 'sales:list',
+    get: 'sales:get',
+    create: 'sales:create',
+    void: 'sales:void',
+  },
+  dashboard: {
+    metrics: 'dashboard:metrics',
+  },
+  reports: {
+    sales: 'reports:sales',
+    topProducts: 'reports:top-products',
+  },
+  backup: {
+    create: 'backup:create',
+    list: 'backup:list',
   },
 } as const;
-
-export type IpcChannel =
-  | (typeof IPC_CHANNELS.health)[keyof typeof IPC_CHANNELS.health]
-  | (typeof IPC_CHANNELS.settings)[keyof typeof IPC_CHANNELS.settings]
-  | (typeof IPC_CHANNELS.products)[keyof typeof IPC_CHANNELS.products];
