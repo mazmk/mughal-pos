@@ -1,10 +1,11 @@
 <mat-sidenav-container class="h-screen w-screen">
   <mat-sidenav
     #sidenav
-    mode="side"
+    [mode]="compact() ? 'over' : 'side'"
     [opened]="sidenavOpen()"
+    (openedChange)="sidenavOpen.set($event)"
+    [disableClose]="!compact()"
     class="!w-60 !border-r"
-    disableClose
   >
     <div class="flex h-14 items-center gap-3 px-4 border-b border-outline-variant">
       <mat-icon class="text-primary">storefront</mat-icon>
@@ -17,8 +18,7 @@
           mat-list-item
           [routerLink]="item.route"
           routerLinkActive="active-link"
-          [matTooltip]="item.label"
-          matTooltipPosition="right"
+          (click)="onNavigate()"
         >
           <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
           <span matListItemTitle>{{ item.label }}</span>
@@ -28,11 +28,11 @@
   </mat-sidenav>
 
   <mat-sidenav-content class="flex flex-col">
-    <mat-toolbar class="!h-14 border-b border-outline-variant">
+    <mat-toolbar class="!h-14 shrink-0 gap-2 border-b border-outline-variant">
       <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidebar">
         <mat-icon>menu</mat-icon>
       </button>
-      <span class="font-medium">Mughal Tuck Shop POS</span>
+      <span class="font-medium truncate">Mughal Tuck Shop POS</span>
       <span class="flex-1"></span>
       <button
         mat-icon-button
@@ -43,7 +43,7 @@
       </button>
     </mat-toolbar>
 
-    <main class="flex-1 overflow-auto p-6">
+    <main class="flex-1 min-h-0 overflow-auto p-4 lg:p-6">
       <router-outlet />
     </main>
   </mat-sidenav-content>

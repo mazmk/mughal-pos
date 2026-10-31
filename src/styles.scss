@@ -39,6 +39,20 @@ body {
   --app-toolbar-height: 56px;
 }
 
+// Narrow windows: tables scroll sideways inside their card instead of
+// squeezing columns into unreadable wraps or overflowing the page.
+.mat-mdc-card-content:has(> .mat-mdc-table) {
+  overflow-x: auto;
+}
+
+// Headers, codes (SKU / reference) and row-action buttons never wrap; the
+// table scrolls instead of breaking "DRK-001" or stacking edit/delete icons.
+.mat-mdc-table .mat-mdc-header-cell,
+.mat-mdc-table .mat-mdc-cell.\!font-mono,
+.mat-mdc-table .mat-mdc-cell:has(> .mat-mdc-icon-button) {
+  white-space: nowrap;
+}
+
 /* Global Material surface utilities so Tailwind classes can tint using M3 tokens. */
 .bg-surface { background: var(--mat-sys-surface); }
 .bg-surface-variant { background: var(--mat-sys-surface-container); color: var(--mat-sys-on-surface); }

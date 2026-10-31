@@ -25,7 +25,7 @@ import type { NewSupplier, Supplier } from '../../../../shared/ipc-types';
   template: `
     <h2 mat-dialog-title>{{ data ? 'Edit supplier' : 'New supplier' }}</h2>
     <mat-dialog-content>
-      <form [formGroup]="form" class="grid gap-3 pt-2 sm:grid-cols-2 min-w-[32rem]">
+      <form [formGroup]="form" class="grid gap-3 pt-2 sm:grid-cols-2">
         <mat-form-field appearance="outline" class="sm:col-span-2">
           <mat-label>Name</mat-label>
           <input matInput formControlName="name" maxlength="120" cdkFocusInitial />

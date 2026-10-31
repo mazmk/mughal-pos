@@ -288,13 +288,16 @@ preserves them without rewriting rows.
 
 ## Shell environment gotcha
 
-If you run `npm run electron:dev` from a terminal spawned by VS Code / Cursor
-and the app crashes immediately with
+If Electron crashes immediately with
 `TypeError: Cannot read properties of undefined (reading 'on')` from
-`main.js:… electron_1.app.on('ready')`, the parent IDE has leaked
-`ELECTRON_RUN_AS_NODE=1` into your shell. The `electron:dev` script explicitly
-clears it, but a bare `electron .` invocation in that shell won't — open a
-plain Terminal / iTerm, or run `unset ELECTRON_RUN_AS_NODE` first.
+`main.js:… electron_1.app.on('ready')`, it booted as plain Node because
+`ELECTRON_RUN_AS_NODE` is defined. IDE terminals (VS Code / Cursor) leak it as
+`1`, and on **Windows** even an empty value counts as set.
+
+`npm run electron:dev` launches Electron through `scripts/electron-dev.js`,
+which deletes the variable, so it works from any terminal on Windows and macOS.
+A bare `electron .` does not — run `unset ELECTRON_RUN_AS_NODE` (bash) or
+`Remove-Item Env:ELECTRON_RUN_AS_NODE` (PowerShell) first.
 
 ## Cross-platform limitations
 

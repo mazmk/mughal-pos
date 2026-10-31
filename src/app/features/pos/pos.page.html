@@ -1,6 +1,6 @@
 <div class="pos-grid gap-6">
   <section class="flex flex-col gap-4 min-h-0">
-    <header class="flex items-center justify-between gap-3">
+    <header class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h1 class="m-0 text-2xl font-semibold tracking-tight">Point of Sale</h1>
         <p class="m-0 mt-1 text-sm opacity-70">Scan a barcode or type to find a product.</p>
@@ -58,7 +58,7 @@
   </section>
 
   <aside class="flex flex-col gap-3 min-h-0">
-    <mat-card appearance="outlined" class="!rounded-xl flex-1 flex flex-col min-h-0">
+    <mat-card appearance="outlined" class="cart-card !rounded-xl flex-1 flex flex-col">
       <mat-card-header class="shrink-0">
         <mat-card-title class="!text-base !font-semibold flex items-center gap-2">
           <mat-icon>shopping_cart</mat-icon> Cart
@@ -107,12 +107,12 @@
 
     <mat-card appearance="outlined" class="!rounded-xl shrink-0">
       <mat-card-content class="flex flex-col gap-3 !pt-4">
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
           @for (opt of paymentOptions; track opt.value) {
             <button
               mat-stroked-button
               type="button"
-              class="!flex-1"
+              class="!flex-1 !min-w-fit"
               [class.!border-primary]="paymentMethod() === opt.value"
               (click)="paymentMethod.set(opt.value)"
             >

@@ -33,7 +33,7 @@ const REASONS: readonly { value: StockMovementReason; label: string }[] = [
   template: `
     <h2 mat-dialog-title>Record stock movement</h2>
     <mat-dialog-content>
-      <form [formGroup]="form" class="grid gap-3 pt-2 sm:grid-cols-2 min-w-[32rem]">
+      <form [formGroup]="form" class="grid gap-3 pt-2 sm:grid-cols-2">
         <mat-form-field appearance="outline" class="sm:col-span-2">
           <mat-label>Product</mat-label>
           <mat-select formControlName="productId">

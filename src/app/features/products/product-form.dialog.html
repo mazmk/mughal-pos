@@ -1,6 +1,6 @@
 <h2 mat-dialog-title>{{ data ? 'Edit product' : 'New product' }}</h2>
 <mat-dialog-content>
-  <form [formGroup]="form" class="grid gap-3 pt-2 sm:grid-cols-2 min-w-[36rem]">
+  <form [formGroup]="form" class="grid gap-3 pt-2 sm:grid-cols-2">
     <mat-form-field appearance="outline">
       <mat-label>SKU</mat-label>
       <input matInput formControlName="sku" maxlength="60" cdkFocusInitial />

@@ -44,7 +44,10 @@ touching Electron/DB code. Smoke scripts use the real user-data folder; never
 run them against a shop's live database.
 
 If `electron .` crashes with `Cannot read properties of undefined (reading 'on')`,
-`ELECTRON_RUN_AS_NODE=1` leaked from the IDE — unset it.
+`ELECTRON_RUN_AS_NODE` is defined (IDE terminals leak it; on Windows an empty
+value also counts). `electron:dev` uses `scripts/electron-dev.js`, which deletes
+it. Never "clear" it with `cross-env ELECTRON_RUN_AS_NODE=` — that sets it to
+empty and breaks Windows.
 
 ---
 
@@ -147,6 +150,16 @@ Tailwind colour utilities mapped to M3 tokens: `primary`, `error`, `outline`,
 
 Never place two interactive controls, or a control and a container edge,
 with zero gap. Every new container gets explicit spacing.
+
+### Responsive layout and window size
+- Minimum window: **800 × 520 DIPs** (`electron/main/main.ts`). Target low-end hardware: a 1366×768 laptop at 125% scaling is ~1093×574 DIPs. Every page must work at the minimum with no horizontal page scroll.
+- Below 1200px the sidebar is an overlay drawer (`shell.component.ts`); main padding is `p-4 lg:p-6`.
+- Page headers use `flex flex-wrap` so actions drop below the title on narrow widths.
+- Tables scroll sideways inside their card (global rule in `styles.scss`); headers, mono codes and icon-button cells never wrap. Don't add fixed `min-width` to tables.
+- Dialogs: set width via `dialog.open(..., { width })`; a global default caps `maxWidth` at the window. Never put fixed `min-w-[..rem]` on dialog forms.
+- When a component's layout depends on its own available width (not the window), use a CSS container query, as POS does.
+- Grid columns: `minmax(0, 1fr)` / `clamp()` rather than fixed px tracks.
+- Verify UI changes at 800×520 and ~1093×574, not only on a large monitor.
 
 ### Surfaces and contrast (bright-light environment)
 - Page background: `--mat-sys-background`. Cards and tiles: `--app-card` with a visible `--app-card-border` (set globally for `mat-card`, tables are transparent so they inherit the card).

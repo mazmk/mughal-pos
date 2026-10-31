@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, screen, shell } from 'electron';
 import { join } from 'node:path';
 import { getAppPaths } from './paths';
 import { initializeDatabase, closeDatabase } from '../database/connection';
@@ -7,12 +7,27 @@ import { registerAllIpcHandlers } from '../ipc';
 const isDev = process.env['NODE_ENV'] === 'development';
 let mainWindow: BrowserWindow | null = null;
 
+/**
+ * Window sizing, in DIPs (Windows display scaling shrinks the usable area).
+ * The minimum targets low-end counter hardware: a 1366x768 laptop at the
+ * default 125% scaling leaves ~1093x574 above the taskbar; 1280x720 @125%
+ * leaves ~1024x536. The renderer layout is responsive down to this size.
+ */
+const DEFAULT_SIZE = { width: 1280, height: 800 };
+const MIN_SIZE = { width: 800, height: 520 };
+
 function createMainWindow(): BrowserWindow {
+  const workArea = screen.getPrimaryDisplay().workAreaSize;
+  const width = Math.min(DEFAULT_SIZE.width, workArea.width);
+  const height = Math.min(DEFAULT_SIZE.height, workArea.height);
+  // Small screens: start maximized rather than with a window hanging off-screen.
+  const startMaximized = workArea.width < DEFAULT_SIZE.width || workArea.height < DEFAULT_SIZE.height;
+
   const window = new BrowserWindow({
-    width: 1280,
-    height: 800,
-    minWidth: 1024,
-    minHeight: 640,
+    width,
+    height,
+    minWidth: Math.min(MIN_SIZE.width, workArea.width),
+    minHeight: Math.min(MIN_SIZE.height, workArea.height),
     backgroundColor: '#101014',
     show: false,
     webPreferences: {
@@ -46,7 +61,10 @@ function createMainWindow(): BrowserWindow {
     window.loadFile(indexFile);
   }
 
-  window.once('ready-to-show', () => window.show());
+  window.once('ready-to-show', () => {
+    if (startMaximized) window.maximize();
+    window.show();
+  });
   window.on('closed', () => {
     mainWindow = null;
   });
