@@ -1,0 +1,82 @@
+{
+  "name": "mughal-pos",
+  "productName": "Mughal POS",
+  "version": "0.1.0",
+  "description": "Offline-first cross-platform Point of Sale for tuck shops",
+  "author": {
+    "name": "Mughal POS",
+    "email": "support@mughal-pos.local"
+  },
+  "main": "dist-electron/electron/main/main.js",
+  "private": true,
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "watch:electron": "tsc -p tsconfig.electron.json --watch",
+    "lint": "ng lint",
+    "format": "prettier --write \"**/*.{ts,html,scss,json,md}\"",
+    "rebuild:native": "electron-rebuild -f -w better-sqlite3",
+    "smoke:db": "npm run build:electron && node scripts/smoke-test-db.js",
+    "smoke:ipc": "npm run build -- --configuration=production && npm run build:electron && node scripts/smoke-test-ipc.js",
+    "electron:dev": "cross-env NODE_ENV=development concurrently -k -n ng,tsc,electron -c cyan,yellow,magenta \"ng serve --port 4200\" \"npm run watch:electron\" \"wait-on tcp:4200 && wait-on file:./dist-electron/electron/main/main.js && electron .\"",
+    "electron:build": "npm run build -- --configuration=production && npm run build:electron && electron-builder --mac --win",
+    "electron:build:mac": "npm run build -- --configuration=production && npm run build:electron && electron-builder --mac",
+    "electron:build:win": "npm run build -- --configuration=production && npm run build:electron && electron-builder --win",
+    "electron:pack": "npm run build -- --configuration=production && npm run build:electron && electron-builder --dir"
+  },
+  "prettier": {
+    "printWidth": 100,
+    "singleQuote": true,
+    "overrides": [
+      {
+        "files": "*.html",
+        "options": {
+          "parser": "angular"
+        }
+      }
+    ]
+  },
+  "dependencies": {
+    "@angular/animations": "^20.3.0",
+    "@angular/cdk": "^20.2.0",
+    "@angular/common": "^20.3.0",
+    "@angular/compiler": "^20.3.0",
+    "@angular/core": "^20.3.0",
+    "@angular/forms": "^20.3.0",
+    "@angular/material": "^20.2.0",
+    "@angular/platform-browser": "^20.3.0",
+    "@angular/router": "^20.3.0",
+    "@fontsource/roboto": "^5.1.0",
+    "material-icons": "^1.13.14",
+    "better-sqlite3": "^11.7.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.15.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^20.3.42",
+    "@angular/cli": "^20.3.42",
+    "@angular/compiler-cli": "^20.3.0",
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/jasmine": "~5.1.0",
+    "@types/node": "^22.9.0",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "jasmine-core": "~5.9.0",
+    "karma": "~6.4.0",
+    "karma-chrome-launcher": "~3.2.0",
+    "karma-coverage": "~2.2.0",
+    "karma-jasmine": "~5.1.0",
+    "karma-jasmine-html-reporter": "~2.1.0",
+    "postcss": "^8.4.49",
+    "prettier": "^3.3.3",
+    "tailwindcss": "^3.4.15",
+    "typescript": "~5.9.2",
+    "wait-on": "^8.0.1"
+  }
+}

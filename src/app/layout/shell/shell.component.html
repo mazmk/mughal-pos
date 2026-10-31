@@ -1,0 +1,50 @@
+<mat-sidenav-container class="h-screen w-screen">
+  <mat-sidenav
+    #sidenav
+    mode="side"
+    [opened]="sidenavOpen()"
+    class="!w-60 !border-r"
+    disableClose
+  >
+    <div class="flex h-14 items-center gap-3 px-4 border-b border-outline-variant">
+      <mat-icon class="text-primary">storefront</mat-icon>
+      <span class="font-semibold tracking-tight">Mughal POS</span>
+    </div>
+
+    <mat-nav-list class="!py-2">
+      @for (item of navItems; track item.route) {
+        <a
+          mat-list-item
+          [routerLink]="item.route"
+          routerLinkActive="active-link"
+          [matTooltip]="item.label"
+          matTooltipPosition="right"
+        >
+          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+          <span matListItemTitle>{{ item.label }}</span>
+        </a>
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content class="flex flex-col">
+    <mat-toolbar class="!h-14 border-b border-outline-variant">
+      <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidebar">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <span class="font-medium">Mughal Tuck Shop POS</span>
+      <span class="flex-1"></span>
+      <button
+        mat-icon-button
+        (click)="cycleTheme()"
+        [matTooltip]="'Theme: ' + themeMode()"
+      >
+        <mat-icon>{{ themeIcon() }}</mat-icon>
+      </button>
+    </mat-toolbar>
+
+    <main class="flex-1 overflow-auto p-6">
+      <router-outlet />
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>

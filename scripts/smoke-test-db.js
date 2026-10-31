@@ -1,0 +1,98 @@
+#!/usr/bin/env node
+/**
+ * Smoke test for the SQLite layer. Runs the migrations against a temp DB,
+ * exercises a product create + stock movement, and prints a summary.
+ *
+ * Does NOT require Electron. Run with:
+ *   node scripts/smoke-test-db.js
+ */
+const path = require('node:path');
+const fs = require('node:fs');
+const os = require('node:os');
+
+// Point everything that references `app.getPath('userData')` at a temp dir
+// — but we don't boot Electron here, we exercise the pure DB layer.
+const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mughal-smoke-'));
+const dbFile = path.join(tmpRoot, 'tuckshop.db');
+console.log('[smoke] temp db:', dbFile);
+
+const { initializeDatabase, getSchemaVersion, getDatabase, closeDatabase } = require(
+  '../dist-electron/electron/database/connection',
+);
+const { recordMovement, rebuildStockCache } = require(
+  '../dist-electron/electron/services/stock.service',
+);
+const { productsRepository } = require(
+  '../dist-electron/electron/services/products.repository',
+);
+const { settingsRepository } = require(
+  '../dist-electron/electron/services/settings.repository',
+);
+
+try {
+  initializeDatabase(dbFile);
+  console.log('[smoke] schema version:', getSchemaVersion());
+
+  const product = productsRepository.create({
+    sku: 'TEST-001',
+    barcode: null,
+    name: 'Smoke Test Soda',
+    categoryId: null,
+    unitPrice: 1.5,
+    costPrice: 0.75,
+    taxRate: 0,
+    imagePath: null,
+    isActive: 1,
+    reorderLevel: 5,
+  });
+  console.log('[smoke] created product id=', product.id);
+
+  recordMovement({
+    productId: product.id,
+    reason: 'opening',
+    quantity: 20,
+    unitCost: 0.75,
+    note: 'Opening stock',
+  });
+
+  recordMovement({
+    productId: product.id,
+    reason: 'sale',
+    quantity: -3,
+    note: 'Three sold',
+  });
+
+  const refreshed = productsRepository.get(product.id);
+  console.log('[smoke] stock_on_hand after +20 then -3 =', refreshed?.stockOnHand);
+  if (refreshed?.stockOnHand !== 17) throw new Error('stock mismatch');
+
+  rebuildStockCache();
+  const rebuilt = productsRepository.get(product.id);
+  console.log('[smoke] after rebuildStockCache =', rebuilt?.stockOnHand);
+  if (rebuilt?.stockOnHand !== 17) throw new Error('rebuilt stock mismatch');
+
+  settingsRepository.set('smoke.key', 'ok');
+  const s = settingsRepository.get('smoke.key');
+  console.log('[smoke] setting round-trip =', s?.value);
+  if (s?.value !== 'ok') throw new Error('setting mismatch');
+
+  // Try to drive stock negative — should throw
+  let caught = false;
+  try {
+    recordMovement({ productId: product.id, reason: 'adjustment', quantity: -100 });
+  } catch (e) {
+    caught = true;
+    console.log('[smoke] negative-stock guard works:', e.message);
+  }
+  if (!caught) throw new Error('negative-stock guard failed to trip');
+
+  const rows = getDatabase().prepare('SELECT COUNT(*) AS c FROM stock_movements').get();
+  console.log('[smoke] stock_movements rows =', rows.c);
+
+  closeDatabase();
+  fs.rmSync(tmpRoot, { recursive: true, force: true });
+  console.log('[smoke] PASS');
+} catch (err) {
+  console.error('[smoke] FAIL', err);
+  process.exit(1);
+}

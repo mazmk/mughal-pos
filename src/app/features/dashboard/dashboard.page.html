@@ -1,0 +1,74 @@
+<div class="flex flex-col gap-6">
+  <header class="flex items-start justify-between gap-4">
+    <div>
+      <h1 class="m-0 text-2xl font-semibold tracking-tight">Dashboard</h1>
+      <p class="m-0 mt-1 text-sm opacity-70">Overview of today's shop activity.</p>
+    </div>
+    <button mat-stroked-button (click)="refresh()">
+      <mat-icon>refresh</mat-icon>
+      Refresh health
+    </button>
+  </header>
+
+  <section class="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+    @for (card of stats(); track card.label) {
+      <mat-card appearance="outlined" class="!rounded-xl">
+        <mat-card-content class="flex items-center gap-4 !p-5">
+          <div
+            class="flex h-12 w-12 items-center justify-center rounded-full"
+            [class.bg-primary-container]="card.tone === 'primary'"
+            [class.bg-tertiary-container]="card.tone === 'tertiary'"
+            [class.bg-error-container]="card.tone === 'warn'"
+            [class.bg-surface-variant]="card.tone === 'neutral'"
+          >
+            <mat-icon>{{ card.icon }}</mat-icon>
+          </div>
+          <div class="flex flex-col">
+            <span class="text-xs uppercase tracking-wide opacity-70">{{ card.label }}</span>
+            <span class="text-2xl font-semibold">{{ card.value }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    }
+  </section>
+
+  <mat-card appearance="outlined" class="!rounded-xl">
+    <mat-card-header>
+      <mat-card-title class="!text-base !font-semibold">System health</mat-card-title>
+      <mat-card-subtitle>Local database &amp; Electron bridge status</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content class="!pt-2">
+      @if (loading()) {
+        <div class="flex items-center gap-3 py-2">
+          <mat-spinner diameter="20" />
+          <span>Checking…</span>
+        </div>
+      } @else if (error()) {
+        <mat-chip color="warn" highlighted>
+          <mat-icon matChipAvatar>error</mat-icon>
+          {{ error() }}
+        </mat-chip>
+      } @else if (status(); as s) {
+        <div class="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+          <div class="flex items-center gap-2">
+            <mat-icon class="!text-base" [class.text-green-500]="s.databaseInitialized">
+              {{ s.databaseInitialized ? 'check_circle' : 'cancel' }}
+            </mat-icon>
+            <span class="text-sm">Database initialized</span>
+          </div>
+          <div class="text-sm"><strong>Schema version:</strong> {{ s.schemaVersion }}</div>
+          <div class="text-sm"><strong>App version:</strong> {{ s.appVersion }}</div>
+          <div class="text-sm"><strong>Platform:</strong> {{ s.platform }}</div>
+          <div class="text-sm sm:col-span-2 break-all">
+            <strong>Database:</strong> {{ s.databasePath }}
+          </div>
+          <div class="text-sm sm:col-span-2 break-all">
+            <strong>User data:</strong> {{ s.userDataPath }}
+          </div>
+        </div>
+      } @else {
+        <span class="text-sm opacity-70">No data.</span>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>

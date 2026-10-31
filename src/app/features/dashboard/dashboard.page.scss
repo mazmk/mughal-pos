@@ -1,0 +1,16 @@
+.bg-primary-container {
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+}
+.bg-tertiary-container {
+  background: var(--mat-sys-tertiary-container);
+  color: var(--mat-sys-on-tertiary-container);
+}
+.bg-error-container {
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+}
+.bg-surface-variant {
+  background: var(--mat-sys-surface-variant);
+  color: var(--mat-sys-on-surface-variant);
+}

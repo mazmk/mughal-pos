@@ -1,0 +1,40 @@
+appId: com.mughal.pos
+productName: Mughal POS
+copyright: Copyright © 2026
+directories:
+  output: release
+  buildResources: build
+files:
+  - dist/**
+  - dist-electron/**
+  - package.json
+  - '!**/*.map'
+asar: true
+asarUnpack:
+  - '**/node_modules/better-sqlite3/**'
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+  category: public.app-category.business
+  minimumSystemVersion: '11.0'
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  identity: null
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  requestedExecutionLevel: asInvoker
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+linux:
+  target:
+    - AppImage
+  category: Office

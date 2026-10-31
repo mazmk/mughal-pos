@@ -1,0 +1,25 @@
+@use 'theme';
+
+@import '@fontsource/roboto/400.css';
+@import '@fontsource/roboto/500.css';
+@import '@fontsource/roboto/700.css';
+@import 'material-icons/iconfont/material-icons.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--mat-sys-background);
+  color: var(--mat-sys-on-background);
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root {
+  --app-sidebar-width: 240px;
+  --app-toolbar-height: 56px;
+}
