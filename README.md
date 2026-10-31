@@ -259,13 +259,34 @@ The dashboard shows the live database path at runtime (click **Refresh health**)
 
 ## Backup strategy
 
-- Manual backup (future): use `better-sqlite3`'s `.backup()` method to snapshot
-  the DB to `TuckShop/backups/`. The method is online and transaction-safe.
-- Automatic backups (future-ready): schedule from the main process on app start
-  / interval; wire to settings `backup.*`.
-- Full backup = `TuckShop/` folder (DB + images + config).
-- CSV export / import endpoints are reserved in the architecture (`exports/`)
-  and will be added as IPC channels.
+Managed from **Settings → Backups** (`electron/services/backup.service.ts`).
+
+| Type | When | Pruned automatically |
+| --- | --- | --- |
+| Manual | "Back up now" | Never |
+| Automatic | Once a day while the app runs (setting `backup.auto.enabled`) | Keeps last N (`backup.auto.keep`, default 14) |
+| Before restore | Automatically, right before any restore — the undo point | Keeps newest 10 |
+| Before update | Automatically, before a schema migration runs on existing data | Keeps newest 10 |
+| Imported | "Import backup…" from a USB drive / folder | Never |
+
+How a backup is made: SQLite online backup → staging file → converted to a
+self-contained file → `integrity_check` + `foreign_key_check` + required
+tables → SHA-256 → moved into `TuckShop/backups/` with a `.json` manifest
+(type, app + schema version, record counts, checksum). A file that fails any
+check is never published.
+
+How a restore runs:
+
+1. Re-verify the backup (checksum, integrity, not from a newer app version).
+2. Lock all other IPC (no sale can be written mid-restore).
+3. Take a **Before restore** backup of the current data.
+4. Copy the backup, upgrade it to the current schema, re-check it.
+5. Swap the database file and reopen. If reopening fails, the original file is
+   moved back automatically.
+
+To undo a restore, restore the newest **Before restore** backup. Export copies
+to a USB drive regularly — backups on the same disk do not survive a disk
+failure. The shop logo is stored in the database, so it is part of every backup.
 
 ---
 

@@ -57,7 +57,7 @@ empty and breaks Windows.
 electron/      main process: lifecycle, IPC handlers, services, SQLite
   main/        main.ts (window, security), paths.ts (user-data layout)
   preload/     preload.ts — the ONLY bridge the renderer sees
-  ipc/         <domain>.ipc.ts — validate input, call a service/repository
+  ipc/         <domain>.ipc.ts — validate input, call a service/repository (ipc-wrapper.ts = handler wrapper + maintenance lock)
   services/    repositories (*.repository.ts) and business logic (*.service.ts)
   database/    connection, migration runner, migrations/NNN_name.ts
 shared/        types + contract used by BOTH sides (no runtime deps)
@@ -95,6 +95,17 @@ Handlers return data or throw; `handle()` converts to `{ ok, data } | { ok: fals
 delta goes through `electron/services/stock.service.ts > recordMovement()`
 which writes the `stock_movements` ledger row and the cache in one
 transaction. Sales, purchases, adjustments, returns all use it.
+
+### Backup & restore (`electron/services/backup.service.ts`)
+- Never write into `TuckShop/backups/` directly or open a backup/user-picked file read-write — validate on a copy in `backups/.staging`, then publish via `finalizeSnapshot()` (integrity check + SHA-256 + manifest).
+- Anything that replaces the live database must go through `restore()`: verify → `setMaintenance()` lock → pre-restore snapshot → prepare copy → `swapLiveDatabase()` (rolls back on failure).
+- Renderer passes backup **filenames only**; `resolveBackup()` rejects anything that is not a plain name inside `backups/`.
+- If a migration renames or drops a table in `REQUIRED_TABLES`, update that list in the same change.
+- Repositories must call `getDatabase()` per operation (no module-level cached statements) — the connection is replaced on restore.
+
+### Branding
+- `shop.name` / `shop.logo` settings drive the toolbar. `shop.logo` is a PNG data URL written **only** by `branding.service.ts` (file picker in main → `nativeImage` decode → resize ≤ 1024×256). `settings.set` refuses that key.
+- Product brand assets: installer/app icons in `build/` (electron-builder `buildResources`), runtime window icon in `assets/` (`extraResources`), in-app logos in `public/brand/`. Source kit: `mughal-pos-electron-icons/`.
 
 ### Database
 - Schema changes = a new file `electron/database/migrations/NNN_description.ts`, appended to the array in `migrations.ts`. Never edit an applied migration.
@@ -172,6 +183,7 @@ with zero gap. Every new container gets explicit spacing.
 - Icons: `<mat-icon>name</mat-icon>` (Material Icons ligature font from the `material-icons` npm package, **filled** set only). Use names from https://fonts.google.com/icons?icon.set=Material+Icons. Do not add `material-symbols`, icon CDNs, or SVG icons fetched at runtime; register local SVGs with `MatIconRegistry` + `DomSanitizer` if a custom icon is ever needed.
 - Fonts: Roboto from `@fontsource/roboto`. New fonts must come from an npm package, imported in `styles.scss`.
 - Production builds have `optimization.styles.inlineCritical: false` in `angular.json`. **Do not re-enable it.** Critical-CSS inlining loads the stylesheet with an inline `onload` handler, which the CSP blocks, so the packaged app renders with no styles and icons show as text.
+- **No `<base href>`** (`baseHref` is unset in `angular.json`). With hash routing over `file://`, a base of `./` makes the router rewrite the URL to the folder (dropping `index.html`), so any reload — Ctrl+R or the post-restore reload — shows a blank page. Keep asset paths relative (`brand/x.svg`, not `/brand/x.svg`).
 
 ---
 

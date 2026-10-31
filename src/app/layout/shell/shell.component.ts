@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
@@ -9,6 +9,7 @@ import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { SettingsService } from '../../core/services/settings.service';
 import { ThemeService, ThemeMode } from '../../core/services/theme.service';
 import { NAV_ITEMS } from '../navigation';
 
@@ -32,7 +33,18 @@ import { NAV_ITEMS } from '../navigation';
 export class ShellComponent {
   readonly navItems = NAV_ITEMS;
   private readonly theme = inject(ThemeService);
+  private readonly settings = inject(SettingsService);
   readonly themeMode = this.theme.mode;
+
+  /** Product brand (sidebar) — white wordmark variant on dark surfaces. */
+  readonly brandLogo = computed(() =>
+    this.theme.isDark()
+      ? 'brand/logo-horizontal-dark-transparent.svg'
+      : 'brand/logo-horizontal-light.svg'
+  );
+  /** Shop identity (toolbar), editable in Settings. */
+  readonly shopName = this.settings.shopName;
+  readonly shopLogo = computed(() => this.settings.shopLogo() || 'brand/symbol-color.svg');
 
   /**
    * Below 1200px the sidebar becomes an overlay drawer so small windows /
@@ -66,7 +78,10 @@ export class ShellComponent {
       light: 'dark',
       dark: 'system',
     };
-    this.theme.setMode(next[this.themeMode()]);
+    const mode = next[this.themeMode()];
+    this.theme.setMode(mode);
+    // Persist like the Settings page does, so the choice survives a restart.
+    void this.settings.set('theme.mode', mode).catch(() => undefined);
   }
 
   themeIcon(): string {

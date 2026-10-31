@@ -7,9 +7,8 @@
     [disableClose]="!compact()"
     class="!w-60 !border-r"
   >
-    <div class="flex h-14 items-center gap-3 px-4 border-b border-outline-variant">
-      <mat-icon class="text-primary">storefront</mat-icon>
-      <span class="font-semibold tracking-tight">Mughal POS</span>
+    <div class="flex h-14 items-center px-4 border-b border-outline-variant">
+      <img [src]="brandLogo()" alt="Mughal POS" class="h-9 w-auto" />
     </div>
 
     <mat-nav-list class="!py-2">
@@ -32,7 +31,8 @@
       <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidebar">
         <mat-icon>menu</mat-icon>
       </button>
-      <span class="font-medium truncate">Mughal Tuck Shop POS</span>
+      <img [src]="shopLogo()" alt="" class="h-9 w-auto max-w-32 shrink-0 object-contain" />
+      <span class="font-semibold truncate">{{ shopName() }}</span>
       <span class="flex-1"></span>
       <button
         mat-icon-button

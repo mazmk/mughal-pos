@@ -59,6 +59,16 @@ const CH = {
   // backup
   backupCreate: 'backup:create',
   backupList: 'backup:list',
+  backupCurrent: 'backup:current',
+  backupVerify: 'backup:verify',
+  backupRestore: 'backup:restore',
+  backupImport: 'backup:import',
+  backupExport: 'backup:export',
+  backupRemove: 'backup:remove',
+  backupOpenFolder: 'backup:open-folder',
+  // branding
+  brandingPickLogo: 'branding:pick-logo',
+  brandingClearLogo: 'branding:clear-logo',
 } as const;
 
 const invoke = (channel: string, ...args: unknown[]) => ipcRenderer.invoke(channel, ...args);
@@ -119,7 +129,18 @@ contextBridge.exposeInMainWorld('api', {
     topProducts: (range: unknown, limit?: number) => invoke(CH.reportsTopProducts, range, limit),
   },
   backup: {
-    create: () => invoke(CH.backupCreate),
+    create: (note?: string | null) => invoke(CH.backupCreate, note ?? null),
     list: () => invoke(CH.backupList),
+    current: () => invoke(CH.backupCurrent),
+    verify: (filename: string) => invoke(CH.backupVerify, filename),
+    restore: (filename: string) => invoke(CH.backupRestore, filename),
+    import: () => invoke(CH.backupImport),
+    export: (filename: string) => invoke(CH.backupExport, filename),
+    remove: (filename: string) => invoke(CH.backupRemove, filename),
+    openFolder: () => invoke(CH.backupOpenFolder),
+  },
+  branding: {
+    pickLogo: () => invoke(CH.brandingPickLogo),
+    clearLogo: () => invoke(CH.brandingClearLogo),
   },
 });

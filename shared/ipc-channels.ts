@@ -63,5 +63,16 @@ export const IPC_CHANNELS = {
   backup: {
     create: 'backup:create',
     list: 'backup:list',
+    current: 'backup:current',
+    verify: 'backup:verify',
+    restore: 'backup:restore',
+    import: 'backup:import',
+    export: 'backup:export',
+    remove: 'backup:remove',
+    openFolder: 'backup:open-folder',
+  },
+  branding: {
+    pickLogo: 'branding:pick-logo',
+    clearLogo: 'branding:clear-logo',
   },
 } as const;

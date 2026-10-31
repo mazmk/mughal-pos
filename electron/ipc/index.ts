@@ -1,4 +1,5 @@
 import { registerBackupIpc } from './backup.ipc';
+import { registerBrandingIpc } from './branding.ipc';
 import { registerCategoriesIpc } from './categories.ipc';
 import { registerDashboardIpc } from './dashboard.ipc';
 import { registerHealthIpc } from './health.ipc';
@@ -22,4 +23,5 @@ export function registerAllIpcHandlers(): void {
   registerDashboardIpc();
   registerReportsIpc();
   registerBackupIpc();
+  registerBrandingIpc();
 }

@@ -1,5 +1,5 @@
-import { CommonModule, DatePipe, DecimalPipe } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -9,10 +9,9 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatTableModule } from '@angular/material/table';
-import { BackupService } from '../../core/services/backup.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { ThemeMode, ThemeService } from '../../core/services/theme.service';
+import { BackupPanelComponent } from './backup-panel.component';
 
 interface ProfileForm {
   name: string;
@@ -32,10 +31,8 @@ interface ProfileForm {
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
-    MatTableModule,
     MatProgressSpinnerModule,
-    DatePipe,
-    DecimalPipe,
+    BackupPanelComponent,
   ],
   templateUrl: './settings.page.html',
   styleUrl: './settings.page.scss',
@@ -44,7 +41,6 @@ export class SettingsPage implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly settings = inject(SettingsService);
   private readonly theme = inject(ThemeService);
-  readonly backup = inject(BackupService);
   private readonly snack = inject(MatSnackBar);
 
   readonly saving = signal(false);
@@ -61,10 +57,12 @@ export class SettingsPage implements OnInit {
     { value: 'dark', label: 'Dark', icon: 'dark_mode' },
   ];
 
-  readonly backupColumns = ['filename', 'size', 'createdAt'] as const;
+  readonly logoBusy = signal(false);
+  readonly hasCustomLogo = computed(() => this.settings.shopLogo() !== '');
+  readonly logoPreview = computed(() => this.settings.shopLogo() || 'brand/symbol-color.svg');
 
   async ngOnInit(): Promise<void> {
-    await Promise.all([this.settings.refresh(), this.backup.refresh()]);
+    await this.settings.refresh();
     this.form.reset({
       name: this.settings.value('shop.name', 'Mughal Tuck Shop'),
       currency: this.settings.value('shop.currency', 'PKR'),
@@ -99,14 +97,26 @@ export class SettingsPage implements OnInit {
     }
   }
 
-  async makeBackup(): Promise<void> {
+  async pickLogo(): Promise<void> {
+    this.logoBusy.set(true);
     try {
-      const info = await this.backup.create();
-      this.snack.open(`Backup created: ${info.filename}`, 'OK', { duration: 3000 });
+      if (await this.settings.pickLogo()) this.snack.open('Shop logo updated', 'OK', { duration: 2500 });
     } catch (err) {
-      this.snack.open(err instanceof Error ? err.message : String(err), 'Dismiss', {
-        duration: 4000,
-      });
+      this.snack.open(err instanceof Error ? err.message : String(err), 'Dismiss', { duration: 5000 });
+    } finally {
+      this.logoBusy.set(false);
+    }
+  }
+
+  async clearLogo(): Promise<void> {
+    this.logoBusy.set(true);
+    try {
+      await this.settings.clearLogo();
+      this.snack.open('Using the default logo', 'OK', { duration: 2500 });
+    } catch (err) {
+      this.snack.open(err instanceof Error ? err.message : String(err), 'Dismiss', { duration: 5000 });
+    } finally {
+      this.logoBusy.set(false);
     }
   }
 }

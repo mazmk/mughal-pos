@@ -12,7 +12,13 @@ files:
 asar: true
 asarUnpack:
   - '**/node_modules/better-sqlite3/**'
+# Runtime assets read by the main process (window icon), outside the asar:
+# <install>/resources/assets/… — see electron/main/main.ts > assetPath().
+extraResources:
+  - from: assets
+    to: assets
 mac:
+  icon: build/icon.icns
   target:
     - target: dmg
       arch:
@@ -24,17 +30,23 @@ mac:
   gatekeeperAssess: false
   identity: null
 win:
+  icon: build/icon.ico
   target:
     - target: nsis
       arch:
         - x64
   requestedExecutionLevel: asInvoker
 nsis:
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  shortcutName: Mughal POS
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
   deleteAppDataOnUninstall: false
 linux:
+  icon: build/icons
   target:
     - AppImage
   category: Office

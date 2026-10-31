@@ -1,11 +1,27 @@
-import { app, BrowserWindow, screen, shell } from 'electron';
+import { app, BrowserWindow, dialog, screen, shell } from 'electron';
 import { join } from 'node:path';
 import { getAppPaths } from './paths';
 import { initializeDatabase, closeDatabase } from '../database/connection';
 import { registerAllIpcHandlers } from '../ipc';
+import { backupService } from '../services/backup.service';
 
 const isDev = process.env['NODE_ENV'] === 'development';
 let mainWindow: BrowserWindow | null = null;
+
+// Must match `appId` in electron-builder.yml so Windows groups the taskbar
+// button with the installed shortcut and shows the app icon, not Electron's.
+const APP_USER_MODEL_ID = 'com.mughal.pos';
+
+/**
+ * Runtime assets (window icon). Packaged: copied by electron-builder
+ * `extraResources` to <install>/resources/assets. Dev: <repo>/assets.
+ */
+function assetPath(...segments: string[]): string {
+  const base = app.isPackaged
+    ? join(process.resourcesPath, 'assets')
+    : join(__dirname, '../../../assets');
+  return join(base, ...segments);
+}
 
 /**
  * Window sizing, in DIPs (Windows display scaling shrinks the usable area).
@@ -28,6 +44,7 @@ function createMainWindow(): BrowserWindow {
     height,
     minWidth: Math.min(MIN_SIZE.width, workArea.width),
     minHeight: Math.min(MIN_SIZE.height, workArea.height),
+    icon: assetPath('window-icon.png'),
     backgroundColor: '#101014',
     show: false,
     webPreferences: {
@@ -76,11 +93,31 @@ async function bootstrap(): Promise<void> {
   const paths = getAppPaths();
   console.log('[main] user data root:', paths.root);
 
-  initializeDatabase(paths.databaseFile);
+  try {
+    backupService.cleanupStaging();
+    initializeDatabase(paths.databaseFile, {
+      // Snapshot existing data before any schema upgrade touches it.
+      beforeMigrate: (db, from, to) => backupService.preMigrationSnapshot(db, from, to),
+    });
+  } catch (err) {
+    // Refuse to run rather than risk the data (e.g. database from a newer app
+    // version, or the pre-upgrade safety copy could not be written).
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[main] database startup failed:', message);
+    dialog.showErrorBox(
+      'Mughal POS cannot open your data',
+      `${message}\n\nYour data has not been changed. Data folder:\n${paths.root}`
+    );
+    app.quit();
+    return;
+  }
   registerAllIpcHandlers();
 
   mainWindow = createMainWindow();
+  backupService.startAutoBackups();
 }
+
+if (process.platform === 'win32') app.setAppUserModelId(APP_USER_MODEL_ID);
 
 app.on('ready', () => {
   void bootstrap();
@@ -101,6 +138,7 @@ app.on('web-contents-created', (_event, contents) => {
 });
 
 app.on('before-quit', () => {
+  backupService.stopAutoBackups();
   closeDatabase();
 });
 

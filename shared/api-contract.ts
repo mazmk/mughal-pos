@@ -1,4 +1,6 @@
 import type {
+  BackupCheck,
+  BackupCurrentState,
   BackupInfo,
   Category,
   CategoryPatch,
@@ -15,6 +17,7 @@ import type {
   ProductPatch,
   Purchase,
   ReportRange,
+  RestoreResult,
   Sale,
   SalesReportRow,
   Setting,
@@ -84,7 +87,21 @@ export interface MughalApi {
     topProducts(range: ReportRange, limit?: number): Promise<IpcResponse<TopProductRow[]>>;
   };
   backup: {
-    create(): Promise<IpcResponse<BackupInfo>>;
+    create(note?: string | null): Promise<IpcResponse<BackupInfo>>;
     list(): Promise<IpcResponse<BackupInfo[]>>;
+    current(): Promise<IpcResponse<BackupCurrentState>>;
+    verify(filename: string): Promise<IpcResponse<BackupCheck>>;
+    restore(filename: string): Promise<IpcResponse<RestoreResult>>;
+    /** Opens a file picker; null when the user cancels. */
+    import(): Promise<IpcResponse<BackupInfo | null>>;
+    /** Opens a save dialog; returns the saved path, or null when cancelled. */
+    export(filename: string): Promise<IpcResponse<string | null>>;
+    remove(filename: string): Promise<IpcResponse<{ filename: string }>>;
+    openFolder(): Promise<IpcResponse<void>>;
+  };
+  branding: {
+    /** Opens a file picker, normalises the image and stores it as `shop.logo`. Null when cancelled. */
+    pickLogo(): Promise<IpcResponse<Setting | null>>;
+    clearLogo(): Promise<IpcResponse<void>>;
   };
 }

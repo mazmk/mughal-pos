@@ -36,4 +36,21 @@ export class SettingsService {
     await this.bridge.unwrap(this.bridge.api.settings.set(key, value));
     await this.refresh();
   }
+
+  /** Shop identity shown in the app header. */
+  readonly shopName = computed(() => this.value('shop.name', 'Mughal Tuck Shop'));
+  /** PNG data URL, or '' to fall back to the Mughal POS mark. */
+  readonly shopLogo = computed(() => this.value('shop.logo'));
+
+  /** Opens a file picker in the main process. Returns false if the user cancelled. */
+  async pickLogo(): Promise<boolean> {
+    const saved = await this.bridge.unwrap(this.bridge.api.branding.pickLogo());
+    await this.refresh();
+    return saved !== null;
+  }
+
+  async clearLogo(): Promise<void> {
+    await this.bridge.unwrap(this.bridge.api.branding.clearLogo());
+    await this.refresh();
+  }
 }

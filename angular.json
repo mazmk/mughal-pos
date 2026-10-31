@@ -22,7 +22,6 @@
           "builder": "@angular/build:application",
           "options": {
             "browser": "src/main.ts",
-            "baseHref": "./",
             "polyfills": [
               "zone.js"
             ],

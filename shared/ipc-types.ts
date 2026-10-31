@@ -275,9 +275,59 @@ export interface ReportRange {
 /*  Backup                                                                     */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Why a backup exists. `manual` and `imported` are never pruned automatically;
+ * `auto` follows the retention setting; safety snapshots keep the newest 10.
+ */
+export type BackupKind = 'manual' | 'auto' | 'pre-restore' | 'pre-migration' | 'imported';
+
+/** `verified` = checksum + SQLite integrity passed at creation or last verify. */
+export type BackupStatus = 'verified' | 'unverified' | 'damaged';
+
+/** Row counts captured in a backup, shown so the user knows what they restore. */
+export interface BackupCounts {
+  products: number;
+  categories: number;
+  suppliers: number;
+  sales: number;
+  purchases: number;
+  stockMovements: number;
+}
+
 export interface BackupInfo {
   filename: string;
   path: string;
   sizeBytes: number;
   createdAt: string;
+  kind: BackupKind;
+  status: BackupStatus;
+  /** Schema version inside the backup; null for legacy backups never verified. */
+  schemaVersion: number | null;
+  appVersion: string | null;
+  sha256: string | null;
+  counts: BackupCounts | null;
+  note: string | null;
+  /** Date of the latest sale in the backup — "data up to". */
+  lastSaleAt: string | null;
+}
+
+export interface BackupCheck {
+  ok: boolean;
+  /** Human-readable reasons when ok is false. */
+  problems: string[];
+  info: BackupInfo;
+}
+
+export interface RestoreResult {
+  restored: BackupInfo;
+  /** Snapshot of the data that was replaced — restore this to undo. */
+  safetyBackup: BackupInfo;
+}
+
+/** Live database summary, for comparing against a backup before restoring. */
+export interface BackupCurrentState {
+  counts: BackupCounts;
+  lastSaleAt: string | null;
+  schemaVersion: number;
+  backupsFolder: string;
 }

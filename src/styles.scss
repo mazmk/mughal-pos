@@ -55,7 +55,8 @@ body {
 
 /* Global Material surface utilities so Tailwind classes can tint using M3 tokens. */
 .bg-surface { background: var(--mat-sys-surface); }
-.bg-surface-variant { background: var(--mat-sys-surface-container); color: var(--mat-sys-on-surface); }
+// Highest container: distinct from cards in both themes (dark cards use surface-container).
+.bg-surface-variant { background: var(--mat-sys-surface-container-highest); color: var(--mat-sys-on-surface); }
 .bg-primary-container { background: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); }
 .bg-tertiary-container { background: var(--mat-sys-tertiary-container); color: var(--mat-sys-on-tertiary-container); }
 .bg-error-container { background: var(--mat-sys-error-container); color: var(--mat-sys-on-error-container); }

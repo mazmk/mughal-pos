@@ -13,6 +13,24 @@ interface Migration {
 
 const migrations: readonly Migration[] = [migration_001_initial];
 
+/** Highest schema version this build of the app knows how to run. */
+export const LATEST_SCHEMA_VERSION = migrations[migrations.length - 1].version;
+
+/**
+ * Schema version recorded in an existing database, or 0 for a brand-new file
+ * (no schema_migrations table yet). Does not modify the database.
+ */
+export function readSchemaVersion(db: Database.Database): number {
+  const table = db
+    .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'schema_migrations'`)
+    .get();
+  if (!table) return 0;
+  const row = db.prepare(`SELECT MAX(version) AS v FROM schema_migrations`).get() as {
+    v: number | null;
+  };
+  return row.v ?? 0;
+}
+
 export function runMigrations(db: Database.Database): number {
   db.exec(`
     CREATE TABLE IF NOT EXISTS schema_migrations (

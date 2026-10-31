@@ -1,0 +1,178 @@
+<mat-card appearance="outlined" class="!rounded-xl">
+  <mat-card-header>
+    <mat-card-title class="!text-base !font-semibold">Backups</mat-card-title>
+    <mat-card-subtitle>
+      Complete snapshots of your shop data, checked for damage when saved. Export a copy to a USB
+      drive regularly in case this computer fails.
+    </mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content class="flex flex-col gap-4 pt-4">
+    <div class="flex flex-wrap items-center gap-3">
+      <button mat-flat-button color="primary" (click)="backUpNow()" [disabled]="busy() !== null">
+        @if (backup.creating()) {
+          <mat-spinner diameter="18" class="!mr-2" />
+        } @else {
+          <mat-icon>backup</mat-icon>
+        }
+        Back up now
+      </button>
+      <button mat-stroked-button (click)="importBackup()" [disabled]="busy() !== null">
+        <mat-icon>upload_file</mat-icon>
+        Import backup…
+      </button>
+      <button mat-stroked-button (click)="openFolder()" [disabled]="busy() !== null">
+        <mat-icon>folder_open</mat-icon>
+        Open backups folder
+      </button>
+    </div>
+
+    <div class="grid gap-3 md:grid-cols-2">
+      <div
+        class="flex items-center gap-3 p-4 rounded-lg"
+        [class.bg-error-container]="stale()"
+        [class.bg-surface-variant]="!stale()"
+      >
+        <mat-icon class="shrink-0">{{ stale() ? 'warning' : 'history' }}</mat-icon>
+        <div class="flex flex-col min-w-0">
+          <span class="text-sm font-medium">Last backup</span>
+          @if (latest(); as l) {
+            <span class="text-sm">
+              {{ l.createdAt | date: 'medium' }} · {{ kindLabel(l.kind) }}
+            </span>
+            @if (stale()) {
+              <span class="text-xs">Older than 2 days — back up now.</span>
+            }
+          } @else {
+            <span class="text-sm">No backups yet — back up now.</span>
+          }
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-3 p-4 rounded-lg bg-surface-variant">
+        <mat-slide-toggle
+          [checked]="autoEnabled()"
+          (change)="setAutoEnabled($event.checked)"
+          [disabled]="busy() !== null"
+        >
+          Automatic daily backup
+        </mat-slide-toggle>
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-40">
+          <mat-label>Keep last</mat-label>
+          <mat-select
+            [value]="autoKeep()"
+            (selectionChange)="setAutoKeep($event.value)"
+            [disabled]="!autoEnabled() || busy() !== null"
+          >
+            @for (n of keepOptions; track n) {
+              <mat-option [value]="n">{{ n }} days</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
+    </div>
+
+    @if (backup.items().length > 0) {
+      <table mat-table [dataSource]="backup.items()" class="!w-full">
+        <ng-container matColumnDef="createdAt">
+          <th mat-header-cell *matHeaderCellDef>Saved</th>
+          <td mat-cell *matCellDef="let b">
+            <div class="flex flex-col py-2">
+              <span class="whitespace-nowrap">{{ b.createdAt | date: 'medium' }}</span>
+              @if (b.note) {
+                <span class="text-xs opacity-70">{{ b.note }}</span>
+              }
+            </div>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="kind">
+          <th mat-header-cell *matHeaderCellDef>Type</th>
+          <td mat-cell *matCellDef="let b">
+            <span
+              class="inline-flex whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium"
+              [class]="kindTone(b.kind)"
+            >
+              {{ kindLabel(b.kind) }}
+            </span>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="contents">
+          <th mat-header-cell *matHeaderCellDef>Contents</th>
+          <td mat-cell *matCellDef="let b">
+            @if (b.counts; as c) {
+              <div class="flex flex-col">
+                <span class="whitespace-nowrap">{{ plural(c.products, 'product') }} · {{ plural(c.sales, 'sale') }}</span>
+                @if (b.lastSaleAt) {
+                  <span class="text-xs opacity-70 whitespace-nowrap">
+                    Last sale {{ b.lastSaleAt | date: 'short' }}
+                  </span>
+                }
+              </div>
+            } @else {
+              <span class="opacity-70">Run Verify</span>
+            }
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="size">
+          <th mat-header-cell *matHeaderCellDef class="!text-right">Size</th>
+          <td mat-cell *matCellDef="let b" class="!text-right whitespace-nowrap">
+            {{ formatSize(b.sizeBytes) }}
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Check</th>
+          <td mat-cell *matCellDef="let b">
+            <mat-icon
+              [class]="status(b.status).tone"
+              [matTooltip]="status(b.status).label"
+              [attr.aria-label]="status(b.status).label"
+            >
+              {{ status(b.status).icon }}
+            </mat-icon>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let b" class="!text-right">
+            @if (busy() === b.filename) {
+              <mat-spinner diameter="20" class="inline-block" />
+            } @else {
+              <button
+                mat-icon-button
+                [matMenuTriggerFor]="menu"
+                [disabled]="busy() !== null"
+                aria-label="Backup actions"
+              >
+                <mat-icon>more_vert</mat-icon>
+              </button>
+            }
+            <mat-menu #menu="matMenu" xPosition="before">
+              <button mat-menu-item (click)="startRestore(b)" [disabled]="b.status === 'damaged'">
+                <mat-icon>settings_backup_restore</mat-icon>
+                <span>Restore…</span>
+              </button>
+              <button mat-menu-item (click)="verify(b)">
+                <mat-icon>fact_check</mat-icon>
+                <span>Verify</span>
+              </button>
+              <button mat-menu-item (click)="exportBackup(b)">
+                <mat-icon>save_alt</mat-icon>
+                <span>Export to USB / folder…</span>
+              </button>
+              <button mat-menu-item (click)="deleteBackup(b)">
+                <mat-icon>delete</mat-icon>
+                <span>Delete…</span>
+              </button>
+            </mat-menu>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="columns"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      </table>
+    }
+
+    @if (backup.current(); as cur) {
+      <p class="m-0 text-xs opacity-70 break-all">Stored in {{ cur.backupsFolder }}</p>
+    }
+  </mat-card-content>
+</mat-card>
