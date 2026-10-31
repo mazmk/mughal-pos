@@ -16,7 +16,7 @@
           <p class="m-0">No sales recorded yet. Head to POS to make the first one.</p>
         </div>
       } @else {
-        <table mat-table [dataSource]="svc.items()" class="!w-full">
+        <table mat-table [dataSource]="svc.items()" multiTemplateDataRows class="!w-full">
           <ng-container matColumnDef="soldAt">
             <th mat-header-cell *matHeaderCellDef>When</th>
             <td mat-cell *matCellDef="let s">{{ s.soldAt | date: 'short' }}</td>
@@ -62,9 +62,15 @@
           </ng-container>
 
           <ng-container matColumnDef="detail">
-            <td mat-cell *matCellDef="let s" [attr.colspan]="columns.length">
+            <td
+              mat-cell
+              *matCellDef="let s"
+              [attr.colspan]="columns.length"
+              class="!p-0"
+              [class.!border-0]="expandedId() !== s.id"
+            >
               @if (expandedId() === s.id) {
-                <div class="p-4 flex flex-col gap-2 bg-surface-variant">
+                <div class="px-6 py-4 flex flex-col gap-3 bg-surface-variant">
                   <div class="grid gap-2 sm:grid-cols-4 text-sm">
                     <div><strong>Subtotal:</strong> {{ (s.totalAmount - s.taxAmount + s.discountAmount) | money }}</div>
                     <div><strong>Tax:</strong> {{ s.taxAmount | money }}</div>

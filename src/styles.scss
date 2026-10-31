@@ -3,11 +3,26 @@
 @import '@fontsource/roboto/400.css';
 @import '@fontsource/roboto/500.css';
 @import '@fontsource/roboto/700.css';
-@import 'material-icons/iconfont/material-icons.css';
+// Filled set only — the app uses <mat-icon> with the default "Material Icons"
+// ligature font. The other variants (outlined, round, …) were dead weight.
+@import 'material-icons/iconfont/filled.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+// Preflight is off (it fights Angular Material), but without its border reset
+// `border-t`, `border-b`, `divide-y` set a width with `border-style: none` and
+// render nothing. Opt-in to elements using Tailwind border/divide utilities
+// only: a global `*` reset breaks Material's outlined form-field notch, which
+// relies on the browser default `border-style: none`.
+@layer base {
+  :where([class*='border'], [class*='divide-'] > *) {
+    border-width: 0;
+    border-style: solid;
+    border-color: var(--mat-sys-outline-variant);
+  }
+}
 
 html,
 body {
@@ -30,4 +45,3 @@ body {
 .bg-primary-container { background: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); }
 .bg-tertiary-container { background: var(--mat-sys-tertiary-container); color: var(--mat-sys-on-tertiary-container); }
 .bg-error-container { background: var(--mat-sys-error-container); color: var(--mat-sys-on-error-container); }
-.border-outline { border-color: var(--mat-sys-outline-variant); }

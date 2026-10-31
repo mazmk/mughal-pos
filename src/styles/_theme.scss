@@ -23,6 +23,15 @@ html {
   --app-surface-variant: var(--mat-sys-surface-variant);
   --app-on-surface: var(--mat-sys-on-surface);
   --app-outline: var(--mat-sys-outline-variant);
+
+  // Cards sit on the page background. In M3 light, background and surface are
+  // the same colour, which washes out under bright shop lighting. Cards use a
+  // pure-white surface with a visible edge and a soft shadow instead, so the
+  // separation survives glare (edges stay visible when subtle tints do not).
+  --app-card: var(--mat-sys-surface-container-lowest);
+  --app-card-hover: var(--mat-sys-surface-container-low);
+  --app-card-border: var(--mat-sys-outline-variant);
+  --app-card-shadow: 0 1px 2px rgb(16 24 40 / 0.06), 0 1px 3px rgb(16 24 40 / 0.1);
 }
 
 html.dark-theme {
@@ -36,5 +45,27 @@ html.dark-theme {
     ),
     typography: Roboto,
     density: 0,
+  ));
+
+  // In dark mode "lowest" is darker than the background, so lift cards instead.
+  --app-card: var(--mat-sys-surface-container);
+  --app-card-hover: var(--mat-sys-surface-container-high);
+  --app-card-shadow: none;
+}
+
+html {
+  @include mat.card-overrides((
+    outlined-container-color: var(--app-card),
+    outlined-outline-color: var(--app-card-border),
+    outlined-container-elevation: var(--app-card-shadow),
+    // Subtitles default to the same size as titles; keep them secondary.
+    subtitle-text-size: var(--mat-sys-body-medium-size),
+    subtitle-text-weight: var(--mat-sys-body-medium-weight),
+    subtitle-text-color: var(--mat-sys-on-surface-variant),
+  ));
+
+  // Tables inherit the card behind them instead of painting the page surface.
+  @include mat.table-overrides((
+    background-color: transparent,
   ));
 }

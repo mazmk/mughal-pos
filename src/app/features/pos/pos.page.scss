@@ -26,17 +26,28 @@
 .product-tile {
   display: flex;
   flex-direction: column;
+  gap: 4px;
+  min-height: 112px;
   text-align: left;
-  padding: 14px;
+  padding: 16px;
   border-radius: 12px;
-  background: var(--mat-sys-surface-container);
+  background: var(--app-card);
   color: var(--mat-sys-on-surface);
-  border: 1px solid var(--mat-sys-outline-variant);
+  border: 1px solid var(--app-card-border);
+  box-shadow: var(--app-card-shadow);
+  font: inherit;
   cursor: pointer;
   transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
 
+  // Chromium wraps <button> contents in an anonymous box that shrink-wraps
+  // its children, which collapses the justify-between rows. Force full width.
+  > * {
+    width: 100%;
+  }
+
   &:hover:not(:disabled) {
-    background: var(--mat-sys-surface-container-high);
+    background: var(--app-card-hover);
+    border-color: var(--mat-sys-primary);
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }

@@ -10,7 +10,7 @@
       <mat-card-subtitle>Used across receipts, reports, and formatting.</mat-card-subtitle>
     </mat-card-header>
     <mat-card-content>
-      <form [formGroup]="form" (ngSubmit)="save()" class="grid gap-4 sm:grid-cols-2 pt-2">
+      <form [formGroup]="form" (ngSubmit)="save()" class="grid gap-x-4 gap-y-2 sm:grid-cols-2 pt-4">
         <mat-form-field appearance="outline" class="sm:col-span-2">
           <mat-label>Shop name</mat-label>
           <input matInput formControlName="name" maxlength="80" />

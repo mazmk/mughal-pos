@@ -5,7 +5,7 @@
   </header>
 
   <mat-card appearance="outlined" class="!rounded-xl">
-    <mat-card-content class="flex flex-wrap items-end gap-3 pt-4">
+    <mat-card-content class="flex flex-wrap items-start gap-x-3 pt-4">
       <mat-form-field appearance="outline">
         <mat-label>From</mat-label>
         <input matInput [matDatepicker]="dpFrom" [ngModel]="from()" (ngModelChange)="from.set($event)" />
@@ -26,7 +26,7 @@
           <mat-option value="month">Monthly</mat-option>
         </mat-select>
       </mat-form-field>
-      <button mat-flat-button color="primary" (click)="run()">
+      <button mat-flat-button color="primary" class="!mt-2" (click)="run()">
         <mat-icon>analytics</mat-icon>
         Run report
       </button>
