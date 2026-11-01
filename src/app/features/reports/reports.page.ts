@@ -3,7 +3,6 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatNativeDateModule } from '@angular/material/core';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -36,7 +35,6 @@ function toISODate(d: Date): string {
     MatInputModule,
     MatSelectModule,
     MatDatepickerModule,
-    MatNativeDateModule,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
@@ -49,8 +47,8 @@ export class ReportsPage implements OnInit {
   private readonly reports = inject(ReportsService);
   private readonly snack = inject(MatSnackBar);
 
-  readonly from = signal<Date>(new Date(Date.now() - 30 * 86400_000));
-  readonly to = signal<Date>(new Date());
+  readonly from = signal<Date | null>(new Date(Date.now() - 30 * 86400_000));
+  readonly to = signal<Date | null>(new Date());
   readonly granularity = signal<ReportRange['granularity']>('day');
 
   readonly rows = signal<SalesReportRow[]>([]);
@@ -70,14 +68,27 @@ export class ReportsPage implements OnInit {
     };
   });
 
+  /** 2026-11-01 → 01/11/2026 and 2026-11 → 11/2026. Week buckets (2026-W44) stay as they are. */
+  bucketLabel(bucket: string): string {
+    return bucket.replace(/^(\d{4})-(\d{2})(?:-(\d{2}))?$/, (_, year, month, day) =>
+      day ? `${day}/${month}/${year}` : `${month}/${year}`,
+    );
+  }
+
   async ngOnInit(): Promise<void> {
     await this.run();
   }
 
   async run(): Promise<void> {
+    const from = this.from();
+    const to = this.to();
+    if (!from || !to) {
+      this.snack.open('Enter both dates as dd/mm/yyyy', 'OK', { duration: 3000 });
+      return;
+    }
     const range: ReportRange = {
-      from: toISODate(this.from()),
-      to: toISODate(this.to()),
+      from: toISODate(from),
+      to: toISODate(to),
       granularity: this.granularity(),
     };
     this.loading.set(true);

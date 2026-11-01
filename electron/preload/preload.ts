@@ -66,6 +66,7 @@ const CH = {
   backupExport: 'backup:export',
   backupRemove: 'backup:remove',
   backupOpenFolder: 'backup:open-folder',
+  backupClearShop: 'backup:clear-shop',
   // branding
   brandingPickLogo: 'branding:pick-logo',
   brandingClearLogo: 'branding:clear-logo',
@@ -138,6 +139,7 @@ contextBridge.exposeInMainWorld('api', {
     export: (filename: string) => invoke(CH.backupExport, filename),
     remove: (filename: string) => invoke(CH.backupRemove, filename),
     openFolder: () => invoke(CH.backupOpenFolder),
+    clearShop: () => invoke(CH.backupClearShop),
   },
   branding: {
     pickLogo: () => invoke(CH.brandingPickLogo),

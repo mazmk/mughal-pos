@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from "@angular/core";
 import { firstValueFrom } from "rxjs";
 import { MatButtonModule } from '@angular/material/button';
@@ -11,6 +11,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import type { Category } from '../../../../shared/ipc-types';
 import { CategoriesService } from '../../core/services/categories.service';
+import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { CategoryFormDialog } from './category-form.dialog';
 
@@ -25,7 +26,7 @@ import { CategoryFormDialog } from './category-form.dialog';
     MatIconModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
-    DatePipe,
+    AppDatePipe,
   ],
   templateUrl: './categories.page.html',
   styleUrl: './categories.page.scss',

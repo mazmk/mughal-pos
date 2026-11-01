@@ -9,6 +9,7 @@ import {
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import type { Category, NewCategory } from '../../../../shared/ipc-types';
+import { SubmitFormDirective } from '../../shared/directives/submit-form.directive';
 
 @Component({
   selector: 'app-category-form-dialog',
@@ -19,14 +20,16 @@ import type { Category, NewCategory } from '../../../../shared/ipc-types';
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
+    SubmitFormDirective,
   ],
   template: `
     <h2 mat-dialog-title>{{ data ? 'Edit category' : 'New category' }}</h2>
     <mat-dialog-content>
-      <form [formGroup]="form" class="flex flex-col gap-3 pt-2 min-w-80">
+      <form id="category-form" [formGroup]="form" (appSubmit)="save()" class="flex flex-col gap-3 pt-2 min-w-80">
         <mat-form-field appearance="outline">
           <mat-label>Name</mat-label>
           <input matInput formControlName="name" maxlength="80" cdkFocusInitial />
+          <mat-error>Enter a name</mat-error>
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Description</mat-label>
@@ -36,7 +39,7 @@ import type { Category, NewCategory } from '../../../../shared/ipc-types';
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="ref.close()">Cancel</button>
-      <button mat-flat-button color="primary" [disabled]="form.invalid" (click)="save()">
+      <button mat-flat-button color="primary" type="submit" form="category-form">
         {{ data ? 'Save' : 'Create' }}
       </button>
     </mat-dialog-actions>

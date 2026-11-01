@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -15,6 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import type { BackupInfo, BackupKind, BackupStatus } from '../../../../shared/ipc-types';
 import { BackupService } from '../../core/services/backup.service';
 import { SettingsService } from '../../core/services/settings.service';
+import { AppDatePipe, formatAppDate } from '../../shared/pipes/app-date.pipe';
 import {
   ConfirmDialogComponent,
   type ConfirmDialogData,
@@ -26,6 +26,7 @@ const KIND_LABELS: Record<BackupKind, string> = {
   auto: 'Automatic',
   'pre-restore': 'Before restore',
   'pre-migration': 'Before update',
+  'pre-clear': 'Before clearing',
   imported: 'Imported',
 };
 
@@ -42,7 +43,7 @@ const STALE_AFTER_MS = 48 * 60 * 60 * 1000;
   selector: 'app-backup-panel',
   standalone: true,
   imports: [
-    DatePipe,
+    AppDatePipe,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -99,7 +100,9 @@ export class BackupPanelComponent implements OnInit {
 
   kindTone(kind: BackupKind): string {
     if (kind === 'manual') return 'bg-primary-container';
-    if (kind === 'pre-restore' || kind === 'pre-migration') return 'bg-tertiary-container';
+    if (kind === 'pre-restore' || kind === 'pre-migration' || kind === 'pre-clear') {
+      return 'bg-tertiary-container';
+    }
     return 'bg-surface-variant';
   }
 
@@ -139,7 +142,7 @@ export class BackupPanelComponent implements OnInit {
   async deleteBackup(b: BackupInfo): Promise<void> {
     const confirmed = await this.confirm({
       title: 'Delete backup?',
-      message: `The backup from ${new Date(b.createdAt).toLocaleString()} will be permanently deleted. This cannot be undone.`,
+      message: `The backup from ${formatAppDate(b.createdAt, 'datetime-seconds')} will be permanently deleted. This cannot be undone.`,
       confirmLabel: 'Delete',
       destructive: true,
     });

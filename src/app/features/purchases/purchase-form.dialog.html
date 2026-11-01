@@ -1,6 +1,6 @@
 <h2 mat-dialog-title>New purchase</h2>
 <mat-dialog-content>
-  <form [formGroup]="form" class="grid gap-3 pt-2 sm:grid-cols-3">
+  <form id="purchase-form" [formGroup]="form" (appSubmit)="save()" class="grid gap-3 pt-2 sm:grid-cols-3">
     <mat-form-field appearance="outline">
       <mat-label>Supplier</mat-label>
       <mat-select formControlName="supplierId">
@@ -19,6 +19,7 @@
       <input matInput [matDatepicker]="dp" formControlName="purchasedAt" />
       <mat-datepicker-toggle matIconSuffix [for]="dp"></mat-datepicker-toggle>
       <mat-datepicker #dp></mat-datepicker>
+      <mat-error>Enter a date as dd/mm/yyyy</mat-error>
     </mat-form-field>
     <mat-form-field appearance="outline" class="sm:col-span-3">
       <mat-label>Notes</mat-label>
@@ -26,37 +27,38 @@
     </mat-form-field>
 
     <div class="sm:col-span-3">
-      <div class="flex items-center justify-between mb-2">
-        <h3 class="m-0 text-sm font-semibold uppercase opacity-70">Line items</h3>
-        <button mat-stroked-button type="button" (click)="addItem()">
-          <mat-icon>add</mat-icon> Add line
-        </button>
-      </div>
+      <h3 class="m-0 mb-2 text-sm font-semibold uppercase opacity-70">Line items</h3>
       <div formArrayName="items" class="flex flex-col gap-2">
         @for (group of itemsArray.controls; track $index; let i = $index) {
           <div [formGroupName]="i" class="grid gap-2 sm:grid-cols-[2fr_1fr_1fr_auto] items-start">
             <mat-form-field appearance="outline">
               <mat-label>Product</mat-label>
-              <mat-select formControlName="productId" (selectionChange)="onProductPicked(group)">
+              <mat-select class="line-product" formControlName="productId" (selectionChange)="onProductPicked(group)">
                 @for (p of products.active(); track p.id) {
                   <mat-option [value]="p.id">{{ p.sku }} — {{ p.name }}</mat-option>
                 }
               </mat-select>
+              <mat-error>Choose a product</mat-error>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Qty</mat-label>
               <input matInput type="number" min="0" step="1" formControlName="quantity" />
+              <mat-error>Must be more than 0</mat-error>
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Unit cost</mat-label>
               <input matInput type="number" min="0" step="0.01" formControlName="unitCost" />
+              <mat-error>Enter 0 or more</mat-error>
             </mat-form-field>
-            <button mat-icon-button type="button" class="!mt-1" (click)="removeItem(i)" aria-label="Remove line">
+            <button mat-icon-button type="button" class="!mt-1" (click)="removeItem(i)" [attr.aria-label]="'Remove line ' + (i + 1)">
               <mat-icon>remove_circle_outline</mat-icon>
             </button>
           </div>
         }
       </div>
+      <button mat-stroked-button type="button" class="!mt-2" (click)="addLine()">
+        <mat-icon>add</mat-icon> Add line
+      </button>
     </div>
 
     <div class="sm:col-span-3 flex items-center justify-end gap-4 pt-2 border-t border-outline-variant">
@@ -67,7 +69,7 @@
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button (click)="ref.close()">Cancel</button>
-  <button mat-flat-button color="primary" [disabled]="form.invalid" (click)="save()">
+  <button mat-flat-button color="primary" type="submit" form="purchase-form">
     Save as draft
   </button>
 </mat-dialog-actions>

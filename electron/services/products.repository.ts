@@ -40,16 +40,27 @@ function toProduct(row: ProductRow): Product {
 export const productsRepository = {
   list(): Product[] {
     const rows = getDatabase()
-      .prepare(`SELECT * FROM products ORDER BY name COLLATE NOCASE`)
+      .prepare(`SELECT * FROM products WHERE is_deleted = 0 ORDER BY name COLLATE NOCASE`)
       .all() as ProductRow[];
     return rows.map(toProduct);
   },
 
   get(id: number): Product | null {
-    const row = getDatabase().prepare(`SELECT * FROM products WHERE id = ?`).get(id) as
-      | ProductRow
-      | undefined;
+    const row = getDatabase()
+      .prepare(`SELECT * FROM products WHERE id = ? AND is_deleted = 0`)
+      .get(id) as ProductRow | undefined;
     return row ? toProduct(row) : null;
+  },
+
+  /**
+   * For anything new: sales, purchases, stock adjustments. Voiding a sale or
+   * receiving a draft purchase skips this, as those finish existing records.
+   */
+  assertNotDeleted(id: number): void {
+    const row = getDatabase()
+      .prepare(`SELECT name FROM products WHERE id = ? AND is_deleted = 1`)
+      .get(id) as { name: string } | undefined;
+    if (row) throw new Error(`"${row.name}" was deleted and can no longer be used`);
   },
 
   create(input: NewProduct): Product {
@@ -111,7 +122,7 @@ export const productsRepository = {
 
     fields.push(`updated_at = datetime('now')`);
     getDatabase()
-      .prepare(`UPDATE products SET ${fields.join(', ')} WHERE id = @id`)
+      .prepare(`UPDATE products SET ${fields.join(', ')} WHERE id = @id AND is_deleted = 0`)
       .run(values);
 
     const next = this.get(id);
@@ -119,8 +130,11 @@ export const productsRepository = {
     return next;
   },
 
+  /** Soft delete: the row stays so sales, purchases and stock history keep their product. */
   remove(id: number): { id: number } {
-    getDatabase().prepare(`DELETE FROM products WHERE id = ?`).run(id);
+    getDatabase()
+      .prepare(`UPDATE products SET is_deleted = 1, updated_at = datetime('now') WHERE id = ?`)
+      .run(id);
     return { id };
   },
 
@@ -128,7 +142,8 @@ export const productsRepository = {
     const rows = getDatabase()
       .prepare(
         `SELECT * FROM products
-         WHERE is_active = 1 AND reorder_level > 0 AND stock_on_hand <= reorder_level
+         WHERE is_active = 1 AND is_deleted = 0
+           AND reorder_level > 0 AND stock_on_hand <= reorder_level
          ORDER BY (stock_on_hand - reorder_level), name COLLATE NOCASE`
       )
       .all() as ProductRow[];

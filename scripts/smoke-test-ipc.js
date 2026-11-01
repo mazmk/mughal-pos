@@ -17,6 +17,8 @@ const projectRoot = path.resolve(__dirname, '..');
 const probe = `
 const { app, BrowserWindow, ipcMain } = require('electron');
 
+// A throwaway data folder, so this test never touches a real shop.
+app.setPath('userData', require('node:fs').mkdtempSync(require('node:path').join(require('node:os').tmpdir(), 'mughal-smoke-ipc-')));
 require('./dist-electron/electron/main/main.js');
 
 app.whenReady().then(async () => {
@@ -46,7 +48,7 @@ app.whenReady().then(async () => {
     if (!parsed.list.ok) throw new Error('products.list IPC error: ' + JSON.stringify(parsed.list));
     if (!parsed.settings.ok) throw new Error('settings.list IPC error: ' + JSON.stringify(parsed.settings));
     if (!parsed.health.data.databaseInitialized) throw new Error('database not initialized');
-    if (parsed.health.data.schemaVersion !== 1) throw new Error('unexpected schema version');
+    if (parsed.health.data.schemaVersion !== 2) throw new Error('unexpected schema version');
     if (!Array.isArray(parsed.list.data)) throw new Error('products.list did not return array');
     if (!Array.isArray(parsed.settings.data) || parsed.settings.data.length === 0) {
       throw new Error('settings.list did not return seeded rows');

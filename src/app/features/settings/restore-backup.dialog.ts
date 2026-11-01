@@ -1,5 +1,5 @@
-import { DatePipe } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, Injector, afterNextRender, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
@@ -14,6 +14,7 @@ import type {
   RestoreResult,
 } from '../../../../shared/ipc-types';
 import { BackupService } from '../../core/services/backup.service';
+import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 
 export interface RestoreBackupDialogData {
   backup: BackupInfo;
@@ -41,7 +42,7 @@ type Step = 'confirm' | 'restoring' | 'done' | 'error';
   selector: 'app-restore-backup-dialog',
   standalone: true,
   imports: [
-    DatePipe,
+    AppDatePipe,
     FormsModule,
     MatDialogModule,
     MatButtonModule,
@@ -62,7 +63,7 @@ type Step = 'confirm' | 'restoring' | 'done' | 'error';
                 <strong>Your current data will be replaced.</strong>
                 <span>
                   The shop goes back to how it was on
-                  <strong>{{ data.backup.createdAt | date: 'medium' }}</strong>. Anything entered
+                  <strong>{{ data.backup.createdAt | appDate: 'datetime-seconds' }}</strong>. Anything entered
                   after that (sales, stock, products) will no longer appear.
                 </span>
               </div>
@@ -91,9 +92,9 @@ type Step = 'confirm' | 'restoring' | 'done' | 'error';
                 }
                 <tr class="border-t border-outline-variant">
                   <td class="py-2 pr-4">Last sale</td>
-                  <td class="py-2 px-4 text-right">{{ (data.current?.lastSaleAt | date: 'short') ?? '—' }}</td>
+                  <td class="py-2 px-4 text-right">{{ (data.current?.lastSaleAt | appDate: 'datetime') ?? '—' }}</td>
                   <td class="py-2 pl-4 text-right font-semibold">
-                    {{ (data.backup.lastSaleAt | date: 'short') ?? '—' }}
+                    {{ (data.backup.lastSaleAt | appDate: 'datetime') ?? '—' }}
                   </td>
                 </tr>
               </tbody>
@@ -114,6 +115,7 @@ type Step = 'confirm' | 'restoring' | 'done' | 'error';
                 matInput
                 [ngModel]="typed()"
                 (ngModelChange)="typed.set($event)"
+                (keydown.enter)="restore()"
                 autocomplete="off"
               />
             </mat-form-field>
@@ -175,6 +177,8 @@ export class RestoreBackupDialog {
   readonly data = inject<RestoreBackupDialogData>(MAT_DIALOG_DATA);
   readonly ref = inject<MatDialogRef<RestoreBackupDialog, boolean>>(MatDialogRef);
   private readonly backups = inject(BackupService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
 
   readonly rows = COUNT_ROWS;
   readonly confirmWord = CONFIRM_WORD;
@@ -187,6 +191,13 @@ export class RestoreBackupDialog {
 
   constructor() {
     this.ref.disableClose = true;
+    // disableClose also turns off Esc; bring it back for every step that can be left.
+    this.ref
+      .keydownEvents()
+      .pipe(takeUntilDestroyed())
+      .subscribe((event) => {
+        if (event.key === 'Escape' && this.step() !== 'restoring') this.ref.close(false);
+      });
   }
 
   currentCount(key: keyof BackupCounts): string {
@@ -210,15 +221,24 @@ export class RestoreBackupDialog {
     try {
       this.result.set(await this.backups.restore(this.data.backup.filename));
       this.step.set('done');
+      this.focusStep('mat-dialog-actions button');
       setTimeout(() => this.reload(), 4000);
     } catch (err) {
       this.errorMessage.set(err instanceof Error ? err.message : String(err));
       this.step.set('error');
+      this.focusStep('mat-dialog-actions button');
     }
   }
 
   reload(): void {
     // Every service signal holds pre-restore data; a full reload is the safe reset.
     location.reload();
+  }
+
+  /** The button that had focus is gone once the step changes. */
+  private focusStep(selector: string): void {
+    afterNextRender(() => this.host.nativeElement.querySelector<HTMLElement>(selector)?.focus(), {
+      injector: this.injector,
+    });
   }
 }

@@ -15,6 +15,10 @@ export interface ConfirmDialogData {
   destructive?: boolean;
 }
 
+/**
+ * Enter confirms ordinary questions. Destructive ones open on Cancel, as Enter
+ * should never delete something by reflex: Tab to the button, then Enter.
+ */
 @Component({
   selector: 'app-confirm-dialog',
   standalone: true,
@@ -29,6 +33,7 @@ export interface ConfirmDialogData {
       <button
         mat-flat-button
         [color]="data.destructive ? 'warn' : 'primary'"
+        [attr.cdkFocusInitial]="data.destructive ? null : ''"
         (click)="ref.close(true)"
       >
         {{ data.confirmLabel ?? 'Confirm' }}

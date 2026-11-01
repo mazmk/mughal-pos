@@ -1,4 +1,5 @@
 import { getDatabase } from '../database/connection';
+import { productsRepository } from './products.repository';
 import type { NewSale, Sale, SaleItem } from '../../shared/ipc-types';
 import { recordMovement } from './stock.service';
 
@@ -122,6 +123,7 @@ export const salesService = {
       for (const item of input.items) {
         if (item.quantity <= 0) throw new Error('Sale item quantity must be > 0');
         if (item.unitPrice < 0) throw new Error('Sale item unit price must be >= 0');
+        productsRepository.assertNotDeleted(item.productId);
         const line = item.quantity * item.unitPrice;
         subtotal += line;
         taxAmount += line * (item.taxRate ?? 0);

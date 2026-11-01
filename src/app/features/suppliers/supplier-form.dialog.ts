@@ -10,6 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import type { NewSupplier, Supplier } from '../../../../shared/ipc-types';
+import { SubmitFormDirective } from '../../shared/directives/submit-form.directive';
 
 @Component({
   selector: 'app-supplier-form-dialog',
@@ -21,14 +22,16 @@ import type { NewSupplier, Supplier } from '../../../../shared/ipc-types';
     MatInputModule,
     MatButtonModule,
     MatSlideToggleModule,
+    SubmitFormDirective,
   ],
   template: `
     <h2 mat-dialog-title>{{ data ? 'Edit supplier' : 'New supplier' }}</h2>
     <mat-dialog-content>
-      <form [formGroup]="form" class="grid gap-3 pt-2 sm:grid-cols-2">
+      <form id="supplier-form" [formGroup]="form" (appSubmit)="save()" class="grid gap-3 pt-2 sm:grid-cols-2">
         <mat-form-field appearance="outline" class="sm:col-span-2">
           <mat-label>Name</mat-label>
           <input matInput formControlName="name" maxlength="120" cdkFocusInitial />
+          <mat-error>Enter a name</mat-error>
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Contact name</mat-label>
@@ -41,6 +44,7 @@ import type { NewSupplier, Supplier } from '../../../../shared/ipc-types';
         <mat-form-field appearance="outline">
           <mat-label>Email</mat-label>
           <input matInput type="email" formControlName="email" />
+          <mat-error>Enter a valid email</mat-error>
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Address</mat-label>
@@ -55,7 +59,7 @@ import type { NewSupplier, Supplier } from '../../../../shared/ipc-types';
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button (click)="ref.close()">Cancel</button>
-      <button mat-flat-button color="primary" [disabled]="form.invalid" (click)="save()">
+      <button mat-flat-button color="primary" type="submit" form="supplier-form">
         {{ data ? 'Save' : 'Create' }}
       </button>
     </mat-dialog-actions>

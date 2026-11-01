@@ -15,6 +15,7 @@ module.exports = {
       colors: {
         primary: 'var(--mat-sys-primary)',
         error: 'var(--mat-sys-error)',
+        'on-error': 'var(--mat-sys-on-error)',
         outline: 'var(--mat-sys-outline)',
         'outline-variant': 'var(--mat-sys-outline-variant)',
       },

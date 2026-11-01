@@ -1,5 +1,6 @@
 import { IPC_CHANNELS } from '../../shared/ipc-channels';
 import type { NewStockMovement, StockMovement, StockMovementReason } from '../../shared/ipc-types';
+import { productsRepository } from '../services/products.repository';
 import { stockRepository } from '../services/stock.repository';
 import { recordMovement } from '../services/stock.service';
 import { assertNumber, assertObject, assertString, handle } from './ipc-wrapper';
@@ -44,6 +45,7 @@ export function registerStockIpc(): void {
 
   handle<[unknown], StockMovement>(IPC_CHANNELS.stock.adjust, (_e, input) => {
     const parsed = parseNewMovement(input);
+    productsRepository.assertNotDeleted(parsed.productId);
     const id = recordMovement({
       productId: parsed.productId,
       reason: parsed.reason,

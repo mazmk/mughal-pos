@@ -53,6 +53,34 @@ body {
   white-space: nowrap;
 }
 
+// Keyboard focus must be obvious in a bright shop; Material's tint alone is too faint.
+// :focus-visible means mouse clicks don't draw it.
+body button:focus-visible,
+body a:focus-visible,
+body .mat-sort-header-container:focus-visible {
+  outline: 2px solid var(--mat-sys-primary);
+  outline-offset: 2px;
+}
+
+// Off-screen until a keyboard user reaches it: the first Tab stop in the app.
+.skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 1000;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  font: inherit;
+  transform: translateY(-200%);
+
+  &:focus {
+    transform: none;
+  }
+}
+
 /* Global Material surface utilities so Tailwind classes can tint using M3 tokens. */
 .bg-surface { background: var(--mat-sys-surface); }
 // Highest container: distinct from cards in both themes (dark cards use surface-container).

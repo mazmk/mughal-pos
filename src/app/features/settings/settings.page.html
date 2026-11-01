@@ -33,11 +33,12 @@
         </div>
       </div>
 
-      <form [formGroup]="form" (ngSubmit)="save()" class="grid gap-x-4 gap-y-4 sm:grid-cols-2 pt-4">
+      <form [formGroup]="form" (appSubmit)="save()" class="grid gap-x-4 gap-y-4 sm:grid-cols-2 pt-4">
         <mat-form-field appearance="outline" class="sm:col-span-2">
           <mat-label>Shop name</mat-label>
           <input matInput formControlName="name" maxlength="80" />
           <mat-hint>Shown in the app header</mat-hint>
+          <mat-error>Enter a shop name</mat-error>
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Currency code</mat-label>
@@ -50,7 +51,7 @@
           <mat-hint>BCP 47, e.g. en-PK, en-US</mat-hint>
         </mat-form-field>
         <div class="sm:col-span-2 flex justify-end">
-          <button mat-flat-button color="primary" type="submit" [disabled]="form.invalid || saving()">
+          <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
             @if (saving()) {
               <mat-spinner diameter="18" class="!mr-2" />
             } @else {
@@ -86,4 +87,17 @@
   </mat-card>
 
   <app-backup-panel />
+
+  <mat-card appearance="outlined" class="!rounded-xl">
+    <mat-card-header>
+      <mat-card-title class="!text-base !font-semibold">Clear shop</mat-card-title>
+      <mat-card-subtitle>Delete every record and start again as an empty shop. Backups are kept.</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content class="pt-4">
+      <button mat-flat-button class="!bg-error !text-on-error" type="button" (click)="clearShop()">
+        <mat-icon>delete_forever</mat-icon>
+        Clear shop…
+      </button>
+    </mat-card-content>
+  </mat-card>
 </div>

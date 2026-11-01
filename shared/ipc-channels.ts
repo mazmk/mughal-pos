@@ -70,6 +70,7 @@ export const IPC_CHANNELS = {
     export: 'backup:export',
     remove: 'backup:remove',
     openFolder: 'backup:open-folder',
+    clearShop: 'backup:clear-shop',
   },
   branding: {
     pickLogo: 'branding:pick-logo',

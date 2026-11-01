@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe, TitleCasePipe } from '@angular/common';
+import { CommonModule, TitleCasePipe } from '@angular/common';
 import { Component, OnInit, inject } from "@angular/core";
 import { firstValueFrom } from "rxjs";
 import { MatButtonModule } from '@angular/material/button';
@@ -12,6 +12,7 @@ import { MatTableModule } from '@angular/material/table';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import type { Purchase } from '../../../../shared/ipc-types';
 import { PurchasesService } from '../../core/services/purchases.service';
+import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { PurchaseFormDialog } from './purchase-form.dialog';
@@ -28,7 +29,7 @@ import { PurchaseFormDialog } from './purchase-form.dialog';
     MatChipsModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
-    DatePipe,
+    AppDatePipe,
     TitleCasePipe,
     MoneyPipe,
   ],

@@ -1,3 +1,5 @@
+<button type="button" class="skip-link" (click)="focusMain()">Skip to content</button>
+
 <mat-sidenav-container class="h-screen w-screen">
   <mat-sidenav
     #sidenav
@@ -17,6 +19,7 @@
           mat-list-item
           [routerLink]="item.route"
           routerLinkActive="active-link"
+          ariaCurrentWhenActive="page"
           (click)="onNavigate()"
         >
           <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
@@ -38,12 +41,13 @@
         mat-icon-button
         (click)="cycleTheme()"
         [matTooltip]="'Theme: ' + themeMode()"
+        [attr.aria-label]="'Theme: ' + themeMode()"
       >
         <mat-icon>{{ themeIcon() }}</mat-icon>
       </button>
     </mat-toolbar>
 
-    <main class="flex-1 min-h-0 overflow-auto p-4 lg:p-6">
+    <main #main tabindex="-1" class="flex-1 min-h-0 overflow-auto p-4 lg:p-6 outline-none">
       <router-outlet />
     </main>
   </mat-sidenav-content>

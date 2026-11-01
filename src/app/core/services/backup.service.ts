@@ -3,6 +3,7 @@ import type {
   BackupCheck,
   BackupCurrentState,
   BackupInfo,
+  ClearShopResult,
   RestoreResult,
 } from '../../../../shared/ipc-types';
 import { ElectronBridgeService } from './electron-bridge.service';
@@ -54,6 +55,11 @@ export class BackupService {
   /** Callers should reload the app afterwards — every cached signal is stale. */
   restore(filename: string): Promise<RestoreResult> {
     return this.bridge.unwrap(this.bridge.api.backup.restore(filename));
+  }
+
+  /** Callers should reload the app afterwards — every cached signal is stale. */
+  clearShop(): Promise<ClearShopResult> {
+    return this.bridge.unwrap(this.bridge.api.backup.clearShop());
   }
 
   async import(): Promise<BackupInfo | null> {

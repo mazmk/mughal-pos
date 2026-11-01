@@ -33,7 +33,7 @@ export const dashboardService = {
 
     const totalProducts = (
       db
-        .prepare(`SELECT COUNT(*) AS c FROM products WHERE is_active = 1`)
+        .prepare(`SELECT COUNT(*) AS c FROM products WHERE is_active = 1 AND is_deleted = 0`)
         .get() as { c: number }
     ).c;
 
@@ -42,7 +42,8 @@ export const dashboardService = {
         .prepare(
           `SELECT COUNT(*) AS c
            FROM products
-           WHERE is_active = 1 AND reorder_level > 0 AND stock_on_hand <= reorder_level`
+           WHERE is_active = 1 AND is_deleted = 0
+             AND reorder_level > 0 AND stock_on_hand <= reorder_level`
         )
         .get() as { c: number }
     ).c;
@@ -52,7 +53,7 @@ export const dashboardService = {
         .prepare(
           `SELECT COALESCE(SUM(stock_on_hand * cost_price), 0) AS value
            FROM products
-           WHERE is_active = 1`
+           WHERE is_active = 1 AND is_deleted = 0`
         )
         .get() as { value: number }
     ).value;

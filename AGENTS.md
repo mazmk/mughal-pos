@@ -99,6 +99,7 @@ transaction. Sales, purchases, adjustments, returns all use it.
 ### Backup & restore (`electron/services/backup.service.ts`)
 - Never write into `TuckShop/backups/` directly or open a backup/user-picked file read-write — validate on a copy in `backups/.staging`, then publish via `finalizeSnapshot()` (integrity check + SHA-256 + manifest).
 - Anything that replaces the live database must go through `restore()`: verify → `setMaintenance()` lock → pre-restore snapshot → prepare copy → `swapLiveDatabase()` (rolls back on failure).
+- `clearShop()` follows the same order: `setMaintenance()` lock → pre-clear snapshot → empty every table except `schema_migrations` in one transaction. Backups are kept.
 - Renderer passes backup **filenames only**; `resolveBackup()` rejects anything that is not a plain name inside `backups/`.
 - If a migration renames or drops a table in `REQUIRED_TABLES`, update that list in the same change.
 - Repositories must call `getDatabase()` per operation (no module-level cached statements) — the connection is replaced on restore.
@@ -109,6 +110,8 @@ transaction. Sales, purchases, adjustments, returns all use it.
 
 ### Database
 - Schema changes = a new file `electron/database/migrations/NNN_description.ts`, appended to the array in `migrations.ts`. Never edit an applied migration.
+- A migration that rebuilds a table other tables reference must set `foreignKeysOff: true`.
+- Products are soft-deleted (`is_deleted = 1`), never removed. Queries for current products filter `is_deleted = 0`; history joins (sales, purchases, stock ledger, reports) must not. New sales, purchases and stock adjustments call `productsRepository.assertNotDeleted()`. SKU and barcode are unique among non-deleted products only.
 - Multi-statement writes run inside `db.transaction(...)`.
 - Always parameterized statements (`?`), never string-built SQL with user input.
 - Money is stored and computed as numbers today; round for display with the `money` pipe, do not round in storage.
@@ -123,7 +126,9 @@ transaction. Sales, purchases, adjustments, returns all use it.
 - Use `inject()` in new code. Business logic in services; pages stay thin.
 - Control flow: `@if`, `@for` (always with `track`), `@switch`. No `*ngIf`/`*ngFor` in new templates.
 - Forms: reactive forms in dialogs (`FormBuilder().nonNullable`); trim strings and map empty to `null` before sending.
-- Destructive actions confirm via `shared/components/confirm-dialog`.
+- Destructive actions confirm via `shared/components/confirm-dialog`. It opens on Cancel for `destructive: true`; everything else opens on the confirm button so Enter accepts.
+- Keyboard: every form uses `(appSubmit)` (`shared/directives/submit-form.directive.ts`), not `(ngSubmit)`, so Enter saves or moves to the first invalid field. Never disable a submit button for being invalid; give required fields a `<mat-error>`. Dialog submit buttons sit outside the `<form>`, joined by `type="submit" form="<id>"`.
+- When an action removes the focused element (row deleted, step changed), move focus somewhere deliberate. Icon-only buttons need an `aria-label` that names the item; `matTooltip` does not name a button.
 - Strict TS: no `any`, no non-null `!` to silence errors you could handle.
 - Paths aliases exist (`@shared/*`, `@core/*`, …) but existing code uses relative imports — stay consistent within a file.
 

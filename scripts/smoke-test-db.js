@@ -89,6 +89,35 @@ try {
   const rows = getDatabase().prepare('SELECT COUNT(*) AS c FROM stock_movements').get();
   console.log('[smoke] stock_movements rows =', rows.c);
 
+  // Soft delete: gone from the shop, still in the ledger, SKU free to reuse
+  productsRepository.remove(product.id);
+  if (productsRepository.get(product.id)) throw new Error('deleted product still readable');
+  if (productsRepository.list().length !== 0) throw new Error('deleted product still listed');
+  const kept = getDatabase().prepare('SELECT is_deleted FROM products WHERE id = ?').get(product.id);
+  if (kept?.is_deleted !== 1) throw new Error('product row was not kept');
+  const reused = productsRepository.create({
+    sku: 'TEST-001',
+    barcode: null,
+    name: 'Smoke Test Soda 2',
+    categoryId: null,
+    unitPrice: 2,
+    costPrice: 1,
+    taxRate: 0,
+    imagePath: null,
+    isActive: 1,
+    reorderLevel: 0,
+  });
+  console.log('[smoke] deleted SKU reused by product id=', reused.id);
+
+  let duplicateBlocked = false;
+  try {
+    productsRepository.create({ ...reused, name: 'Duplicate' });
+  } catch (e) {
+    duplicateBlocked = true;
+    console.log('[smoke] duplicate SKU guard works:', e.message);
+  }
+  if (!duplicateBlocked) throw new Error('duplicate SKU was accepted');
+
   closeDatabase();
   fs.rmSync(tmpRoot, { recursive: true, force: true });
   console.log('[smoke] PASS');

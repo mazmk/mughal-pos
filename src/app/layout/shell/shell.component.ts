@@ -1,8 +1,8 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, ElementRef, computed, effect, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { map } from 'rxjs';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { filter, map, skip } from 'rxjs';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatListModule } from '@angular/material/list';
@@ -32,6 +32,7 @@ import { NAV_ITEMS } from '../navigation';
 })
 export class ShellComponent {
   readonly navItems = NAV_ITEMS;
+  private readonly main = viewChild.required<ElementRef<HTMLElement>>('main');
   private readonly theme = inject(ThemeService);
   private readonly settings = inject(SettingsService);
   readonly themeMode = this.theme.mode;
@@ -62,6 +63,19 @@ export class ShellComponent {
   constructor() {
     // Docked when wide, hidden when compact; re-evaluated whenever the window crosses the breakpoint.
     effect(() => this.sidenavOpen.set(!this.compact()));
+
+    // After changing page, Tab starts in that page, not back in the sidebar.
+    inject(Router)
+      .events.pipe(
+        filter((event) => event instanceof NavigationEnd),
+        skip(1),
+        takeUntilDestroyed()
+      )
+      .subscribe(() => this.focusMain());
+  }
+
+  focusMain(): void {
+    this.main().nativeElement.focus();
   }
 
   toggleSidenav(): void {

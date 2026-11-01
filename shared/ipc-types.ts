@@ -279,7 +279,13 @@ export interface ReportRange {
  * Why a backup exists. `manual` and `imported` are never pruned automatically;
  * `auto` follows the retention setting; safety snapshots keep the newest 10.
  */
-export type BackupKind = 'manual' | 'auto' | 'pre-restore' | 'pre-migration' | 'imported';
+export type BackupKind =
+  | 'manual'
+  | 'auto'
+  | 'pre-restore'
+  | 'pre-migration'
+  | 'pre-clear'
+  | 'imported';
 
 /** `verified` = checksum + SQLite integrity passed at creation or last verify. */
 export type BackupStatus = 'verified' | 'unverified' | 'damaged';
@@ -321,6 +327,11 @@ export interface BackupCheck {
 export interface RestoreResult {
   restored: BackupInfo;
   /** Snapshot of the data that was replaced — restore this to undo. */
+  safetyBackup: BackupInfo;
+}
+
+export interface ClearShopResult {
+  /** Snapshot of the data that was deleted — restore this to undo. */
   safetyBackup: BackupInfo;
 }
 

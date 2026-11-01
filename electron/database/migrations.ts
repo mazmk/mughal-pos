@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 import { migration_001_initial } from './migrations/001_initial';
+import { migration_002_products_soft_delete } from './migrations/002_products_soft_delete';
 
 /**
  * Each migration bumps schema_version by exactly 1.
@@ -8,10 +9,19 @@ import { migration_001_initial } from './migrations/001_initial';
 interface Migration {
   version: number;
   name: string;
+  /**
+   * Set when rebuilding a table others reference: DROP TABLE would otherwise
+   * trip ON DELETE RESTRICT. SQLite ignores this pragma inside a transaction,
+   * so the runner sets it around the migration.
+   */
+  foreignKeysOff?: boolean;
   up(db: Database.Database): void;
 }
 
-const migrations: readonly Migration[] = [migration_001_initial];
+const migrations: readonly Migration[] = [
+  migration_001_initial,
+  migration_002_products_soft_delete,
+];
 
 /** Highest schema version this build of the app knows how to run. */
 export const LATEST_SCHEMA_VERSION = migrations[migrations.length - 1].version;
@@ -60,7 +70,12 @@ export function runMigrations(db: Database.Database): number {
         m.name
       );
     });
-    tx();
+    if (m.foreignKeysOff) db.pragma('foreign_keys = OFF');
+    try {
+      tx();
+    } finally {
+      if (m.foreignKeysOff) db.pragma('foreign_keys = ON');
+    }
     console.log(`[db] applied migration ${m.version}: ${m.name}`);
     highest = Math.max(highest, m.version);
   }

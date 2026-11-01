@@ -1,4 +1,5 @@
 import { getDatabase } from '../database/connection';
+import { productsRepository } from './products.repository';
 import type { NewPurchase, Purchase, PurchaseItem } from '../../shared/ipc-types';
 import { recordMovement } from './stock.service';
 
@@ -139,6 +140,7 @@ export const purchasesService = {
       for (const item of input.items) {
         if (item.quantity <= 0) throw new Error('Purchase item quantity must be > 0');
         if (item.unitCost < 0) throw new Error('Purchase item unit cost must be >= 0');
+        productsRepository.assertNotDeleted(item.productId);
         insertItem.run(purchaseId, item.productId, item.quantity, item.unitCost, item.quantity * item.unitCost);
       }
       return purchaseId;

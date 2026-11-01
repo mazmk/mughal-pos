@@ -12,6 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import type { NewProduct, Product } from '../../../../shared/ipc-types';
 import { CategoriesService } from '../../core/services/categories.service';
+import { SubmitFormDirective } from '../../shared/directives/submit-form.directive';
 
 @Component({
   selector: 'app-product-form-dialog',
@@ -24,6 +25,7 @@ import { CategoriesService } from '../../core/services/categories.service';
     MatSelectModule,
     MatButtonModule,
     MatSlideToggleModule,
+    SubmitFormDirective,
   ],
   templateUrl: './product-form.dialog.html',
 })

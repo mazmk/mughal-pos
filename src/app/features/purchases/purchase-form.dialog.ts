@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, computed, inject } from '@angular/core';
+import { Component, ElementRef, Injector, OnInit, afterNextRender, computed, inject } from '@angular/core';
 import {
   FormArray,
   FormBuilder,
@@ -9,7 +9,6 @@ import {
 } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,6 +17,7 @@ import { MatSelectModule } from '@angular/material/select';
 import type { NewPurchase } from '../../../../shared/ipc-types';
 import { ProductsService } from '../../core/services/products.service';
 import { SuppliersService } from '../../core/services/suppliers.service';
+import { SubmitFormDirective } from '../../shared/directives/submit-form.directive';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 
 @Component({
@@ -33,8 +33,8 @@ import { MoneyPipe } from '../../shared/pipes/money.pipe';
     MatButtonModule,
     MatIconModule,
     MatDatepickerModule,
-    MatNativeDateModule,
     MoneyPipe,
+    SubmitFormDirective,
   ],
   templateUrl: './purchase-form.dialog.html',
 })
@@ -42,6 +42,8 @@ export class PurchaseFormDialog implements OnInit {
   private readonly fb = new FormBuilder().nonNullable;
   readonly suppliers = inject(SuppliersService);
   readonly products = inject(ProductsService);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
 
   readonly form = this.fb.group({
     supplierId: this.fb.control<number | null>(null),
@@ -83,9 +85,23 @@ export class PurchaseFormDialog implements OnInit {
     );
   }
 
+  addLine(): void {
+    this.addItem();
+    this.focusLine(this.itemsArray.length - 1);
+  }
+
   removeItem(i: number): void {
     this.itemsArray.removeAt(i);
     if (this.itemsArray.length === 0) this.addItem();
+    this.focusLine(Math.min(i, this.itemsArray.length - 1));
+  }
+
+  /** Adding or removing a row must not drop keyboard focus out of the list. */
+  private focusLine(i: number): void {
+    afterNextRender(
+      () => this.host.nativeElement.querySelectorAll<HTMLElement>('.line-product')[i]?.focus(),
+      { injector: this.injector }
+    );
   }
 
   onProductPicked(group: FormGroup): void {

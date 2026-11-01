@@ -17,6 +17,7 @@ import type {
   ProductPatch,
   Purchase,
   ReportRange,
+  ClearShopResult,
   RestoreResult,
   Sale,
   SalesReportRow,
@@ -98,6 +99,8 @@ export interface MughalApi {
     export(filename: string): Promise<IpcResponse<string | null>>;
     remove(filename: string): Promise<IpcResponse<{ filename: string }>>;
     openFolder(): Promise<IpcResponse<void>>;
+    /** Deletes every record, after taking a safety backup. Backups are kept. */
+    clearShop(): Promise<IpcResponse<ClearShopResult>>;
   };
   branding: {
     /** Opens a file picker, normalises the image and stores it as `shop.logo`. Null when cancelled. */

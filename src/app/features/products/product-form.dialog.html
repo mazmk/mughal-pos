@@ -1,9 +1,10 @@
 <h2 mat-dialog-title>{{ data ? 'Edit product' : 'New product' }}</h2>
 <mat-dialog-content>
-  <form [formGroup]="form" class="grid gap-3 pt-2 sm:grid-cols-2">
+  <form id="product-form" [formGroup]="form" (appSubmit)="save()" class="grid gap-3 pt-2 sm:grid-cols-2">
     <mat-form-field appearance="outline">
       <mat-label>SKU</mat-label>
       <input matInput formControlName="sku" maxlength="60" cdkFocusInitial />
+      <mat-error>Enter a SKU</mat-error>
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>Barcode</mat-label>
@@ -12,6 +13,7 @@
     <mat-form-field appearance="outline" class="sm:col-span-2">
       <mat-label>Name</mat-label>
       <input matInput formControlName="name" maxlength="140" />
+      <mat-error>Enter a name</mat-error>
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>Category</mat-label>
@@ -23,29 +25,32 @@
       </mat-select>
     </mat-form-field>
     <mat-form-field appearance="outline">
-      <mat-label>Reorder level</mat-label>
+      <mat-label>Reorder level (Low stock value)</mat-label>
       <input matInput type="number" min="0" step="1" formControlName="reorderLevel" />
-      <mat-hint>Shown as low stock when on-hand ≤ this value</mat-hint>
+      <mat-error>Enter 0 or more</mat-error>
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>Unit price</mat-label>
       <input matInput type="number" min="0" step="0.01" formControlName="unitPrice" />
+      <mat-error>Enter 0 or more</mat-error>
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>Cost price</mat-label>
       <input matInput type="number" min="0" step="0.01" formControlName="costPrice" />
+      <mat-error>Enter 0 or more</mat-error>
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>Tax rate</mat-label>
       <input matInput type="number" min="0" step="0.001" formControlName="taxRate" />
       <mat-hint>Fraction, e.g. 0.17 for 17%</mat-hint>
+      <mat-error>Enter 0 or more</mat-error>
     </mat-form-field>
     <mat-slide-toggle formControlName="isActive" class="sm:col-span-2">Active</mat-slide-toggle>
   </form>
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button (click)="ref.close()">Cancel</button>
-  <button mat-flat-button color="primary" [disabled]="form.invalid" (click)="save()">
+  <button mat-flat-button color="primary" type="submit" form="product-form">
     {{ data ? 'Save' : 'Create' }}
   </button>
 </mat-dialog-actions>

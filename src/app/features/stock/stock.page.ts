@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe, TitleCasePipe } from '@angular/common';
+import { CommonModule, TitleCasePipe } from '@angular/common';
 import { Component, OnInit, inject } from "@angular/core";
 import { firstValueFrom } from "rxjs";
 import { MatButtonModule } from '@angular/material/button';
@@ -11,6 +11,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import type { StockMovementReason } from '../../../../shared/ipc-types';
 import { StockService } from '../../core/services/stock.service';
+import { AppDatePipe } from '../../shared/pipes/app-date.pipe';
 import { StockAdjustDialog } from './stock-adjust.dialog';
 
 @Component({
@@ -24,7 +25,7 @@ import { StockAdjustDialog } from './stock-adjust.dialog';
     MatIconModule,
     MatProgressSpinnerModule,
     MatChipsModule,
-    DatePipe,
+    AppDatePipe,
     TitleCasePipe,
   ],
   templateUrl: './stock.page.html',

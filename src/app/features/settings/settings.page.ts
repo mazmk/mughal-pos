@@ -3,15 +3,19 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { BackupService } from '../../core/services/backup.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { ThemeMode, ThemeService } from '../../core/services/theme.service';
+import { SubmitFormDirective } from '../../shared/directives/submit-form.directive';
 import { BackupPanelComponent } from './backup-panel.component';
+import { ClearShopDialog, type ClearShopDialogData } from './clear-shop.dialog';
 
 interface ProfileForm {
   name: string;
@@ -33,6 +37,7 @@ interface ProfileForm {
     MatIconModule,
     MatProgressSpinnerModule,
     BackupPanelComponent,
+    SubmitFormDirective,
   ],
   templateUrl: './settings.page.html',
   styleUrl: './settings.page.scss',
@@ -42,6 +47,8 @@ export class SettingsPage implements OnInit {
   private readonly settings = inject(SettingsService);
   private readonly theme = inject(ThemeService);
   private readonly snack = inject(MatSnackBar);
+  private readonly backup = inject(BackupService);
+  private readonly dialog = inject(MatDialog);
 
   readonly saving = signal(false);
   readonly form: FormGroup = this.fb.nonNullable.group({
@@ -68,6 +75,8 @@ export class SettingsPage implements OnInit {
       currency: this.settings.value('shop.currency', 'PKR'),
       locale: this.settings.value('shop.locale', 'en-PK'),
     });
+    this.form.controls['currency'].disable();
+    this.form.controls['locale'].disable();
   }
 
   async save(): Promise<void> {
@@ -118,5 +127,13 @@ export class SettingsPage implements OnInit {
     } finally {
       this.logoBusy.set(false);
     }
+  }
+
+  clearShop(): void {
+    this.dialog.open<ClearShopDialog, ClearShopDialogData, boolean>(ClearShopDialog, {
+      width: '560px',
+      autoFocus: 'dialog',
+      data: { current: this.backup.current() },
+    });
   }
 }

@@ -4,6 +4,7 @@ import type {
   BackupCheck,
   BackupCurrentState,
   BackupInfo,
+  ClearShopResult,
   RestoreResult,
 } from '../../shared/ipc-types';
 import { backupService } from '../services/backup.service';
@@ -38,4 +39,5 @@ export function registerBackupIpc(): void {
     backupService.remove(assertString(filename, 'filename'))
   );
   handle<[], void>(IPC_CHANNELS.backup.openFolder, () => backupService.openFolder());
+  handle<[], ClearShopResult>(IPC_CHANNELS.backup.clearShop, () => backupService.clearShop());
 }

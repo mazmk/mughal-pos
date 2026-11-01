@@ -125,7 +125,7 @@ export class ProductsPage implements OnInit {
     const ref = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Delete product?',
-        message: `Delete "${p.name}"? This fails if the product is on any sale or purchase.`,
+        message: `Delete "${p.name}"? It will no longer appear in the shop. Past sales, purchases and stock history keep it, and its SKU and barcode can be used again.`,
         destructive: true,
         confirmLabel: 'Delete',
       },

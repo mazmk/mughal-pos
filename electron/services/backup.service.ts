@@ -23,6 +23,7 @@ import type {
   BackupInfo,
   BackupKind,
   BackupStatus,
+  ClearShopResult,
   RestoreResult,
 } from '../../shared/ipc-types';
 import {
@@ -56,7 +57,7 @@ import { settingsRepository } from './settings.repository';
 
 const MANIFEST_FORMAT = 1;
 const BACKUP_FILE = /^[A-Za-z0-9][A-Za-z0-9._-]*\.db$/;
-const KIND_IN_NAME = /-(manual|auto|pre-restore|pre-migration|imported)\.db$/;
+const KIND_IN_NAME = /-(manual|auto|pre-restore|pre-migration|pre-clear|imported)\.db$/;
 
 /**
  * Tables a backup must contain to be accepted. Keep in sync with migrations:
@@ -80,6 +81,14 @@ const AUTO_FIRST_CHECK_DELAY_MS = 15 * 1000;
 const AUTO_MIN_AGE_MS = 20 * 60 * 60 * 1000;
 const AUTO_KEEP_DEFAULT = 14;
 const SAFETY_KEEP = 10;
+
+/** What a cleared shop starts with: the same values migration 001 seeds. */
+const DEFAULT_SETTINGS = [
+  ['shop.name', 'Mughal Tuck Shop'],
+  ['shop.currency', 'PKR'],
+  ['shop.locale', 'en-PK'],
+  ['theme.mode', 'system'],
+] as const;
 
 interface Manifest {
   format: number;
@@ -171,8 +180,12 @@ function sha256File(file: string): string {
 function countRows(db: Database.Database): BackupCounts {
   const count = (table: string) =>
     (db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as { n: number }).n;
+  // Backups older than schema v2 have no is_deleted column.
+  const softDeletes = (db.pragma('table_info(products)') as { name: string }[]).some(
+    (column) => column.name === 'is_deleted'
+  );
   return {
-    products: count('products'),
+    products: count(softDeletes ? 'products WHERE is_deleted = 0' : 'products'),
     categories: count('categories'),
     suppliers: count('suppliers'),
     sales: count('sales'),
@@ -378,6 +391,32 @@ function swapLiveDatabase(candidate: string): void {
   for (const s of ['', ...sidecars]) rmSync(parked + s, { force: true });
 }
 
+/**
+ * Empties every table except the migration history, so tables added by later
+ * migrations are covered too. Foreign keys go off because ON DELETE RESTRICT
+ * fires even when deferred; SQLite ignores the pragma inside a transaction.
+ */
+function deleteAllRecords(db: Database.Database): void {
+  const tables = db
+    .prepare(
+      `SELECT name FROM sqlite_master
+       WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name != 'schema_migrations'`
+    )
+    .all() as { name: string }[];
+
+  db.pragma('foreign_keys = OFF');
+  try {
+    db.transaction(() => {
+      for (const { name } of tables) db.prepare(`DELETE FROM "${name}"`).run();
+      db.prepare(`DELETE FROM sqlite_sequence`).run();
+      const seed = db.prepare(`INSERT INTO settings (key, value) VALUES (?, ?)`);
+      for (const [key, value] of DEFAULT_SETTINGS) seed.run(key, value);
+    })();
+  } finally {
+    db.pragma('foreign_keys = ON');
+  }
+}
+
 function readSetting(key: string, fallback: string): string {
   try {
     return settingsRepository.get(key)?.value ?? fallback;
@@ -498,6 +537,30 @@ export const backupService = {
     }
   },
 
+  /**
+   * Deletes every record and puts settings back to their defaults. Backups stay.
+   * Same safety model as restore: lock IPC, then take a safety copy, so nothing
+   * is deleted unless the undo point exists.
+   */
+  async clearShop(): Promise<ClearShopResult> {
+    if (restoring) throw new Error('A restore is already running.');
+    restoring = true;
+    try {
+      setMaintenance('The shop is being cleared.');
+      const safetyBackup = await this.create(
+        'Safety copy taken automatically before clearing the shop',
+        'pre-clear'
+      );
+      deleteAllRecords(getDatabase());
+      this.prune();
+      console.log(`[backup] shop cleared; safety copy ${safetyBackup.filename}`);
+      return { safetyBackup };
+    } finally {
+      setMaintenance(null);
+      restoring = false;
+    }
+  },
+
   /** Copies an external backup (e.g. from USB) into backups/ after validating it. */
   async import(parent: BrowserWindow | null): Promise<BackupInfo | null> {
     const options: Electron.OpenDialogOptions = {
@@ -588,6 +651,7 @@ export const backupService = {
       ...excess('auto', autoKeep()),
       ...excess('pre-restore', SAFETY_KEEP),
       ...excess('pre-migration', SAFETY_KEEP),
+      ...excess('pre-clear', SAFETY_KEEP),
     ];
     for (const b of doomed) {
       try {

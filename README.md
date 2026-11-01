@@ -175,7 +175,8 @@ unreachable, set an environment variable before installing to use a mirror:
 ELECTRON_MIRROR=https://cdn.npmmirror.com/binaries/electron/ npm install
 ```
 
-If you ever see `NODE_MODULE_VERSION` mismatch errors from `better-sqlite3`:
+If you ever see `NODE_MODULE_VERSION` mismatch or `incompatible architecture`
+errors from `better-sqlite3`:
 
 ```bash
 npm run rebuild:native
@@ -267,6 +268,7 @@ Managed from **Settings → Backups** (`electron/services/backup.service.ts`).
 | Automatic | Once a day while the app runs (setting `backup.auto.enabled`) | Keeps last N (`backup.auto.keep`, default 14) |
 | Before restore | Automatically, right before any restore — the undo point | Keeps newest 10 |
 | Before update | Automatically, before a schema migration runs on existing data | Keeps newest 10 |
+| Before clearing | Automatically, right before **Settings → Clear shop** — the undo point | Keeps newest 10 |
 | Imported | "Import backup…" from a USB drive / folder | Never |
 
 How a backup is made: SQLite online backup → staging file → converted to a

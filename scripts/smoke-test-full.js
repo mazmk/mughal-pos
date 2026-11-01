@@ -12,6 +12,8 @@ const projectRoot = path.resolve(__dirname, '..');
 
 const probe = `
 const { app, BrowserWindow } = require('electron');
+// A throwaway data folder: this test clears the shop, so it must never see real data.
+app.setPath('userData', require('node:fs').mkdtempSync(require('node:path').join(require('node:os').tmpdir(), 'mughal-smoke-full-')));
 require('./dist-electron/electron/main/main.js');
 
 const script = \`(async () => {
@@ -71,7 +73,54 @@ const script = \`(async () => {
   // 9. Reread product to confirm stock
   const refreshed = await unwrap(api.products.get(prod.id), 'prod.get');
 
+  // 10. Soft delete keeps history, hides the product and frees its SKU
+  await unwrap(api.products.remove(prod.id), 'prod.remove');
+  const listAfterDelete = await unwrap(api.products.list(), 'prod.list');
+  const saleAfterDelete = await unwrap(api.sales.get(sale.id), 'sale.get');
+  const blockedSale = await api.sales.create({
+    paymentMethod: 'cash', discountAmount: 0, notes: null,
+    items: [{ productId: prod.id, quantity: 1, unitPrice: 50, taxRate: 0 }],
+  });
+  const blockedAdjust = await api.stock.adjust({
+    productId: prod.id, reason: 'restock', quantity: 1, note: null,
+  });
+  const voided = await unwrap(api.sales.void(sale.id), 'sale.void');
+  const reused = await unwrap(api.products.create({
+    sku: 'SMK-001', barcode: null, name: 'Chips v2',
+    categoryId: null, unitPrice: 60, costPrice: 40,
+    taxRate: 0, imagePath: null, isActive: 1, reorderLevel: 0,
+  }), 'prod.recreate');
+
+  // 11. Clear shop empties every record, keeps backups, and can be undone
+  await unwrap(api.settings.set('shop.name', 'Smoke Shop'), 'settings.set');
+  const cleared = await unwrap(api.backup.clearShop(), 'clearShop');
+  const emptyCurrent = await unwrap(api.backup.current(), 'backup.current');
+  const backups = await unwrap(api.backup.list(), 'backup.list');
+  const shopName = await unwrap(api.settings.get('shop.name'), 'settings.get');
+  const firstProduct = await unwrap(api.products.create({
+    sku: 'NEW-001', barcode: null, name: 'First', categoryId: null, unitPrice: 1,
+    costPrice: 1, taxRate: 0, imagePath: null, isActive: 1, reorderLevel: 0,
+  }), 'prod.afterClear');
+  await unwrap(api.backup.restore(cleared.safetyBackup.filename), 'restore');
+  const undone = await unwrap(api.backup.current(), 'backup.current2');
+
   return JSON.stringify({
+    softDelete: {
+      hidden: !listAfterDelete.some((p) => p.id === prod.id),
+      historyName: saleAfterDelete.items[0].productName,
+      saleBlocked: !blockedSale.ok,
+      adjustBlocked: !blockedAdjust.ok,
+      voidStatus: voided.status,
+      reusedSku: reused.sku,
+    },
+    clear: {
+      counts: emptyCurrent.counts,
+      kind: cleared.safetyBackup.kind,
+      backupsKept: backups.length,
+      shopName: shopName.value,
+      firstProductId: firstProduct.id,
+      undone: undone.counts,
+    },
     stockAfter: refreshed.stockOnHand,
     saleRef: sale.reference,
     saleTotal: sale.totalAmount,
@@ -104,6 +153,19 @@ app.whenReady().then(async () => {
     if (!Array.isArray(d.salesReport) || d.salesReport.length === 0) throw new Error('empty sales report');
     if (!Array.isArray(d.topProducts) || d.topProducts.length === 0) throw new Error('empty top products');
     if (!d.backup.size) throw new Error('backup not created');
+    const sd = d.softDelete;
+    if (!sd.hidden) throw new Error('deleted product still listed');
+    if (sd.historyName !== 'Chips') throw new Error('sale lost its product: ' + sd.historyName);
+    if (!sd.saleBlocked || !sd.adjustBlocked) throw new Error('deleted product was usable');
+    if (sd.voidStatus !== 'voided') throw new Error('could not void sale of deleted product');
+    if (sd.reusedSku !== 'SMK-001') throw new Error('SKU not reusable');
+    const c = d.clear;
+    if (Object.values(c.counts).some((n) => n !== 0)) throw new Error('not empty: ' + JSON.stringify(c.counts));
+    if (c.kind !== 'pre-clear') throw new Error('bad safety kind: ' + c.kind);
+    if (c.backupsKept < 2) throw new Error('backups were not kept: ' + c.backupsKept);
+    if (c.shopName !== 'Mughal Tuck Shop') throw new Error('settings not reset: ' + c.shopName);
+    if (c.firstProductId !== 1) throw new Error('ids not reset: ' + c.firstProductId);
+    if (c.undone.sales !== 1 || c.undone.products !== 1) throw new Error('undo failed: ' + JSON.stringify(c.undone));
     console.log('[probe] PASS');
     app.exit(0);
   } catch (err) {
