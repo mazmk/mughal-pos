@@ -3,6 +3,7 @@
   "productName": "Mughal POS",
   "version": "0.2.0",
   "description": "Offline-first cross-platform Point of Sale for tuck shops",
+  "homepage": "https://github.com/mazmk/mughal-pos",
   "author": {
     "name": "Mughal POS",
     "email": "support@mughal-pos.local"

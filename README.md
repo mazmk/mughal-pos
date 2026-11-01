@@ -240,7 +240,7 @@ Artifacts land in `release/`.
 | -------- | --------------------------------------------------------------------------- |
 | macOS    | `~/Library/Application Support/Mughal POS/TuckShop/database/tuckshop.db`    |
 | Windows  | `%APPDATA%\Mughal POS\TuckShop\database\tuckshop.db`                        |
-| Linux    | `~/.config/Mughal POS/TuckShop/database/tuckshop.db` (dev only)             |
+| Linux    | `~/.config/Mughal POS/TuckShop/database/tuckshop.db`                        |
 
 The whole `TuckShop/` folder is self-contained and uses the exact same layout
 across platforms:
@@ -333,6 +333,10 @@ A bare `electron .` does not — run `unset ELECTRON_RUN_AS_NODE` (bash) or
 - **File paths**: all paths go through `node:path` — no `/` hardcoded.
 - **ARM64 vs x64 macOS**: Both targets are configured in `electron-builder.yml`.
   Universal binary can be enabled later with `arch: ['universal']`.
+- **Ubuntu / Debian**: releases include an x64 `.deb`, built and test-launched by
+  the release workflow. Install with `sudo apt install ./mughal-pos_*.deb`. Ubuntu
+  24.04+ needs the AppArmor profile that `build/linux/after-install.sh` installs,
+  or Electron crashes on launch; keep that script when upgrading electron-builder.
 - **Code signing / notarization** is OFF by default. Users will see unsigned-app
   warnings on first launch. Supply certificates in CI before public release.
 

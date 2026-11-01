@@ -78,13 +78,59 @@ jobs:
           path: release/
           if-no-files-found: error
 
-  publish-release:
-    name: Publish GitHub Release
-    needs: [build-windows, build-macos]
+  build-linux:
+    name: Build Linux
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download Windows and Mac builds
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Angular
+        run: npm run build -- --configuration=production
+
+      - name: Build Electron
+        run: npm run build:electron
+
+      - name: Build Debian package
+        run: npx electron-builder --linux deb --publish never
+
+      # A .deb can build fine and still crash on launch (see
+      # build/linux/after-install.sh), so install it and start it for real.
+      # timeout exits 124 only if the app was still running when time ran out.
+      - name: Install and launch the package
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb ./release/*.deb
+          status=0
+          xvfb-run -a timeout 20 mughal-pos || status=$?
+          test "$status" -eq 124
+
+      - name: Upload Debian package
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: release/*.deb
+          if-no-files-found: error
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: [build-windows, build-macos, build-linux]
+    # A manual run only builds and tests; without this it would publish a release named after the branch.
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Windows, Mac and Linux builds
         uses: actions/download-artifact@v4
         with:
           path: release-files
