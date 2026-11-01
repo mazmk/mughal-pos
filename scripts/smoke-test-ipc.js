@@ -48,7 +48,7 @@ app.whenReady().then(async () => {
     if (!parsed.list.ok) throw new Error('products.list IPC error: ' + JSON.stringify(parsed.list));
     if (!parsed.settings.ok) throw new Error('settings.list IPC error: ' + JSON.stringify(parsed.settings));
     if (!parsed.health.data.databaseInitialized) throw new Error('database not initialized');
-    if (parsed.health.data.schemaVersion !== 2) throw new Error('unexpected schema version');
+    if (parsed.health.data.schemaVersion !== 3) throw new Error('unexpected schema version');
     if (!Array.isArray(parsed.list.data)) throw new Error('products.list did not return array');
     if (!Array.isArray(parsed.settings.data) || parsed.settings.data.length === 0) {
       throw new Error('settings.list did not return seeded rows');

@@ -39,7 +39,7 @@ export class SalesPage implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly snack = inject(MatSnackBar);
 
-  readonly columns = ['soldAt', 'reference', 'items', 'payment', 'total', 'status', 'actions'] as const;
+  readonly columns = ['soldAt', 'reference', 'items', 'payment', 'total', 'profit', 'status', 'actions'] as const;
   readonly expandedId = signal<number | null>(null);
 
   ngOnInit(): void {

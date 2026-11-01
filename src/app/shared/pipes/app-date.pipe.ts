@@ -11,10 +11,22 @@ export type AppDateFormat = keyof typeof FORMATS;
 
 type DateValue = string | number | Date | null | undefined;
 
+const SQLITE_DATETIME = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+
+/**
+ * SQLite's datetime('now') is UTC written without a zone, and JavaScript reads
+ * that as local time. Mark it as UTC so it displays on the computer's clock.
+ */
+function withZone(value: string | number | Date): string | number | Date {
+  return typeof value === 'string' && SQLITE_DATETIME.test(value)
+    ? `${value.replace(' ', 'T')}Z`
+    : value;
+}
+
 /** The app's one display format for dates. Returns null for empty values, like Angular's date pipe. */
 export function formatAppDate(value: DateValue, format: AppDateFormat = 'date'): string | null {
   if (value == null || value === '') return null;
-  return formatDate(value, FORMATS[format], 'en-US');
+  return formatDate(withZone(value), FORMATS[format], 'en-US');
 }
 
 @Pipe({ name: 'appDate', standalone: true })

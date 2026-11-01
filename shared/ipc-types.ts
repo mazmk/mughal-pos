@@ -202,6 +202,7 @@ export interface SaleItem {
   productSku: string;
   quantity: number;
   unitPrice: number;
+  unitCost: number;
   lineTotal: number;
   taxRate: number;
 }
@@ -212,6 +213,7 @@ export interface Sale {
   totalAmount: number;
   taxAmount: number;
   discountAmount: number;
+  profit: number;
   paymentMethod: PaymentMethod;
   status: SaleStatus;
   soldAt: string;
@@ -242,6 +244,7 @@ export interface NewSale {
 export interface DashboardMetrics {
   todaySalesAmount: number;
   todaySalesCount: number;
+  todayProfit: number;
   totalProducts: number;
   lowStockProducts: number;
   inventoryValue: number;

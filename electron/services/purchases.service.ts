@@ -170,6 +170,13 @@ export const purchasesService = {
           referenceId: id,
           note: `Received via purchase #${id}`,
         });
+        // Sales take their cost from the product, so keep it at the latest price paid.
+        // A 0 line is free stock and says nothing about what the product costs.
+        if (item.unitCost > 0) {
+          db.prepare(
+            `UPDATE products SET cost_price = ?, updated_at = datetime('now') WHERE id = ?`
+          ).run(item.unitCost, item.productId);
+        }
       }
       db.prepare(
         `UPDATE purchases SET status = 'received', updated_at = datetime('now') WHERE id = ?`

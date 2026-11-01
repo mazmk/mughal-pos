@@ -91,6 +91,8 @@ electron/
     migrations.ts   versioned migration runner
     migrations/
       001_initial.ts  initial schema
+      002_products_soft_delete.ts
+      003_sale_item_cost.ts
   ipc/
     ipc-wrapper.ts  centralized handler wrapper (error envelope + validation)
     health.ipc.ts   db version / paths / platform
@@ -362,17 +364,23 @@ A bare `electron .` does not — run `unset ELECTRON_RUN_AS_NODE` (bash) or
 
 ---
 
-## Database schema (v1)
+## Database schema (v3)
 
 - `categories` — product categorization
 - `suppliers` — vendors
 - `products` — SKUs with cached `stock_on_hand`
 - `stock_movements` — immutable ledger of every stock change
 - `purchases` + `purchase_items` — incoming stock orders
-- `sales` + `sale_items` — completed transactions
+- `sales` + `sale_items` — completed transactions, with each item's cost at sale time
 - `expenses` — misc. shop expenses
 - `settings` — key / value store for shop preferences
 
 All tables use `INTEGER PRIMARY KEY AUTOINCREMENT`, foreign-key constraints
-(enforced via `PRAGMA foreign_keys = ON`), and `datetime('now')` timestamps.
+(enforced via `PRAGMA foreign_keys = ON`), and `datetime('now')` timestamps,
+which are UTC in storage and shown in the computer's time zone.
 WAL mode is enabled for better concurrent reads.
+
+Profit on a sale is its total, minus tax, minus what the items cost. A
+product's cost comes from its product form and updates to the price paid when a
+purchase is received. Products with no cost show their full selling price as
+profit, so set a cost on every product.

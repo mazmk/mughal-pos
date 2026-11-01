@@ -28,6 +28,9 @@ const { productsRepository } = require(
 const { settingsRepository } = require(
   '../dist-electron/electron/services/settings.repository',
 );
+const { salesService } = require('../dist-electron/electron/services/sales.service');
+const { purchasesService } = require('../dist-electron/electron/services/purchases.service');
+const { dashboardService } = require('../dist-electron/electron/services/dashboard.service');
 
 try {
   initializeDatabase(dbFile);
@@ -117,6 +120,37 @@ try {
     console.log('[smoke] duplicate SKU guard works:', e.message);
   }
   if (!duplicateBlocked) throw new Error('duplicate SKU was accepted');
+
+  // Profit: tax and discount are left out, and a later cost change or void can't rewrite it
+  recordMovement({ productId: reused.id, reason: 'opening', quantity: 10 });
+  const sale = (quantity, taxRate, discountAmount) =>
+    salesService.create({
+      items: [{ productId: reused.id, quantity, unitPrice: 5, taxRate }],
+      discountAmount,
+      paymentMethod: 'cash',
+      notes: null,
+    });
+  const taxed = sale(3, 0.1, 1);
+  if (taxed.profit !== 11) throw new Error(`profit mismatch: ${taxed.profit}`);
+
+  const purchase = purchasesService.create({
+    supplierId: null,
+    reference: null,
+    purchasedAt: new Date().toISOString(),
+    notes: null,
+    items: [{ productId: reused.id, quantity: 1, unitCost: 2 }],
+  });
+  purchasesService.receive(purchase.id);
+  if (productsRepository.get(reused.id)?.costPrice !== 2) throw new Error('cost not updated');
+  if (salesService.get(taxed.id)?.profit !== 11) throw new Error('old sale profit changed');
+
+  const later = sale(1, 0, 0);
+  if (later.profit !== 3) throw new Error(`profit at new cost mismatch: ${later.profit}`);
+  if (dashboardService.metrics().todayProfit !== 14) throw new Error('today profit mismatch');
+  salesService.void(later.id);
+  const afterVoid = dashboardService.metrics().todayProfit;
+  if (afterVoid !== 11) throw new Error(`voided sale counted as profit: ${afterVoid}`);
+  console.log('[smoke] today profit =', afterVoid);
 
   closeDatabase();
   fs.rmSync(tmpRoot, { recursive: true, force: true });

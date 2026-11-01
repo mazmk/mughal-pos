@@ -115,6 +115,8 @@ transaction. Sales, purchases, adjustments, returns all use it.
 - Multi-statement writes run inside `db.transaction(...)`.
 - Always parameterized statements (`?`), never string-built SQL with user input.
 - Money is stored and computed as numbers today; round for display with the `money` pipe, do not round in storage.
+- Timestamps are stored in UTC (`datetime('now')`, no zone marker) and shown on the computer's clock. Display them with the `appDate` pipe, never `new Date(value)` on a raw value. SQL that groups or filters by calendar day must use the `'localtime'` modifier: `date(sold_at, 'localtime')`.
+- Profit is `total_amount - tax_amount - quantity × unit_cost` over a sale's items, defined once as `SALE_PROFIT_SQL` in `sales.service.ts`. `sale_items.unit_cost` is copied from the product at sale time so later cost changes leave past sales alone. Receiving a purchase sets `products.cost_price` to the price paid.
 - User data lives under `<userData>/TuckShop/` (see `electron/main/paths.ts`). Store relative paths for files inside it so the folder stays portable.
 
 ---

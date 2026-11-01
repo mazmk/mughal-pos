@@ -1,4 +1,5 @@
 import { getDatabase } from '../database/connection';
+import { SALE_PROFIT_SQL } from './sales.service';
 import type {
   DashboardMetrics,
   ReportRange,
@@ -6,16 +7,17 @@ import type {
   TopProductRow,
 } from '../../shared/ipc-types';
 
+// sold_at is UTC, and a shop's day runs on its own clock, hence 'localtime' throughout.
 function bucketExpression(granularity: ReportRange['granularity']): string {
   switch (granularity) {
     case 'day':
-      return `strftime('%Y-%m-%d', sold_at)`;
+      return `strftime('%Y-%m-%d', sold_at, 'localtime')`;
     case 'week':
-      return `strftime('%Y-W%W', sold_at)`;
+      return `strftime('%Y-W%W', sold_at, 'localtime')`;
     case 'month':
-      return `strftime('%Y-%m', sold_at)`;
+      return `strftime('%Y-%m', sold_at, 'localtime')`;
     default:
-      return `strftime('%Y-%m-%d', sold_at)`;
+      return `strftime('%Y-%m-%d', sold_at, 'localtime')`;
   }
 }
 
@@ -25,11 +27,13 @@ export const dashboardService = {
 
     const today = db
       .prepare(
-        `SELECT COALESCE(SUM(total_amount), 0) AS total, COUNT(*) AS count
+        `SELECT COALESCE(SUM(total_amount), 0) AS total,
+                COUNT(*) AS count,
+                COALESCE(SUM(${SALE_PROFIT_SQL}), 0) AS profit
          FROM sales
-         WHERE status = 'completed' AND date(sold_at) = date('now', 'localtime')`
+         WHERE status = 'completed' AND date(sold_at, 'localtime') = date('now', 'localtime')`
       )
-      .get() as { total: number; count: number };
+      .get() as { total: number; count: number; profit: number };
 
     const totalProducts = (
       db
@@ -71,6 +75,7 @@ export const dashboardService = {
     return {
       todaySalesAmount: today.total,
       todaySalesCount: today.count,
+      todayProfit: today.profit,
       totalProducts,
       lowStockProducts: lowStock,
       inventoryValue,
@@ -90,7 +95,7 @@ export const dashboardService = {
                 COALESCE(SUM(discount_amount), 0) AS discount_amount
          FROM sales
          WHERE status = 'completed'
-           AND date(sold_at) BETWEEN date(?) AND date(?)
+           AND date(sold_at, 'localtime') BETWEEN date(?) AND date(?)
          GROUP BY bucket
          ORDER BY bucket`
       )
@@ -121,7 +126,7 @@ export const dashboardService = {
          JOIN sales s ON s.id = si.sale_id
          JOIN products p ON p.id = si.product_id
          WHERE s.status = 'completed'
-           AND date(s.sold_at) BETWEEN date(?) AND date(?)
+           AND date(s.sold_at, 'localtime') BETWEEN date(?) AND date(?)
          GROUP BY si.product_id, p.name, p.sku
          ORDER BY quantity_sold DESC
          LIMIT ?`

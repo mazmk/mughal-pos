@@ -53,6 +53,13 @@ export class DashboardPage implements OnInit {
         link: '/sales',
       },
       {
+        label: "Today's Profit",
+        value: m ? money(m.todayProfit) : '—',
+        icon: 'trending_up',
+        tone: 'primary' as const,
+        link: '/sales',
+      },
+      {
         label: 'Active Products',
         value: m ? String(m.totalProducts) : '—',
         icon: 'inventory_2',

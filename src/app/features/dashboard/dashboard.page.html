@@ -10,7 +10,7 @@
     </button>
   </header>
 
-  <section class="grid gap-4 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+  <section class="grid gap-4 grid-cols-[repeat(auto-fit,minmax(min(100%,15rem),1fr))]">
     @for (card of stats(); track card.label) {
       <a
         [routerLink]="card.link"
