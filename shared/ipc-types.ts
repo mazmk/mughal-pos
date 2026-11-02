@@ -86,6 +86,21 @@ export interface Product {
 export type NewProduct = Omit<Product, 'id' | 'createdAt' | 'updatedAt'>;
 export type ProductPatch = Partial<NewProduct>;
 
+/** One line of a bulk product import. A category that doesn't exist yet is created. */
+export interface ProductImportRow {
+  category: string | null;
+  name: string;
+  unitPrice: number;
+  costPrice: number;
+}
+
+export interface ProductImportResult {
+  created: number;
+  /** Rows whose product already exists in that category. */
+  skipped: number;
+  categoriesCreated: number;
+}
+
 /* -------------------------------------------------------------------------- */
 /*  Sales                                                                      */
 /* -------------------------------------------------------------------------- */

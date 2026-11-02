@@ -1,5 +1,12 @@
 import { IPC_CHANNELS } from '../../shared/ipc-channels';
-import type { NewProduct, Product, ProductPatch } from '../../shared/ipc-types';
+import type {
+  NewProduct,
+  Product,
+  ProductImportResult,
+  ProductImportRow,
+  ProductPatch,
+} from '../../shared/ipc-types';
+import { MAX_IMPORT_ROWS, productImportService } from '../services/product-import.service';
 import { productsRepository } from '../services/products.repository';
 import { assertNumber, assertObject, assertString, handle } from './ipc-wrapper';
 
@@ -39,6 +46,34 @@ function parsePatch(raw: unknown): ProductPatch {
   return patch;
 }
 
+function parseImportRows(raw: unknown): ProductImportRow[] {
+  if (!Array.isArray(raw)) throw new Error('rows must be an array');
+  if (raw.length > MAX_IMPORT_ROWS) {
+    throw new Error(`Import at most ${MAX_IMPORT_ROWS} products at a time`);
+  }
+  return raw.map((row, i) => {
+    const o = assertObject(row, `rows[${i}]`);
+    const name = assertString(o['name'], `rows[${i}].name`).trim();
+    if (!name || name.length > 140) throw new Error(`Line ${i + 1}: name must be 1–140 characters`);
+    const category =
+      o['category'] === null || o['category'] === undefined
+        ? ''
+        : assertString(o['category'], `rows[${i}].category`).trim();
+    if (category.length > 100) throw new Error(`Line ${i + 1}: category is too long`);
+    const price = (key: 'unitPrice' | 'costPrice') => {
+      const n = o[key] === undefined ? 0 : assertNumber(o[key], `rows[${i}].${key}`);
+      if (n < 0) throw new Error(`Line ${i + 1}: prices can't be negative`);
+      return n;
+    };
+    return {
+      category: category || null,
+      name,
+      unitPrice: price('unitPrice'),
+      costPrice: price('costPrice'),
+    };
+  });
+}
+
 export function registerProductsIpc(): void {
   handle<[], Product[]>(IPC_CHANNELS.products.list, () => productsRepository.list());
 
@@ -56,5 +91,9 @@ export function registerProductsIpc(): void {
 
   handle<[number], { id: number }>(IPC_CHANNELS.products.remove, (_e, id) =>
     productsRepository.remove(assertNumber(id, 'id'))
+  );
+
+  handle<[unknown], ProductImportResult>(IPC_CHANNELS.products.import, (_e, rows) =>
+    productImportService.import(parseImportRows(rows))
   );
 }

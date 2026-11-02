@@ -4,10 +4,16 @@
       <h1 class="m-0 text-2xl font-semibold tracking-tight">Products</h1>
       <p class="m-0 mt-1 text-sm opacity-70">Manage SKUs and prices. Cost price is used to work out profit.</p>
     </div>
-    <button mat-flat-button color="primary" (click)="create()">
-      <mat-icon>add</mat-icon>
-      New product
-    </button>
+    <div class="flex flex-wrap gap-3">
+      <button mat-stroked-button (click)="importProducts()">
+        <mat-icon>upload_file</mat-icon>
+        Import
+      </button>
+      <button mat-flat-button color="primary" (click)="create()">
+        <mat-icon>add</mat-icon>
+        New product
+      </button>
+    </div>
   </header>
 
   <mat-card appearance="outlined" class="!rounded-xl">

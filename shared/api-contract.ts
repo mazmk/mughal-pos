@@ -17,6 +17,8 @@ import type {
   NewProduct,
   NewSale,
   Product,
+  ProductImportResult,
+  ProductImportRow,
   ProductPatch,
   ReportRange,
   ClearShopResult,
@@ -53,6 +55,8 @@ export interface MughalApi {
     create(input: NewProduct): Promise<IpcResponse<Product>>;
     update(id: number, patch: ProductPatch): Promise<IpcResponse<Product>>;
     remove(id: number): Promise<IpcResponse<{ id: number }>>;
+    /** Adds many products at once, creating missing categories; existing products are skipped. */
+    import(rows: ProductImportRow[]): Promise<IpcResponse<ProductImportResult>>;
   };
   sales: {
     list(): Promise<IpcResponse<Sale[]>>;

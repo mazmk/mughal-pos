@@ -30,6 +30,7 @@ const CH = {
   productsCreate: 'products:create',
   productsUpdate: 'products:update',
   productsRemove: 'products:remove',
+  productsImport: 'products:import',
   // sales
   salesList: 'sales:list',
   salesGet: 'sales:get',
@@ -89,6 +90,7 @@ contextBridge.exposeInMainWorld('api', {
     create: (input: unknown) => invoke(CH.productsCreate, input),
     update: (id: number, patch: unknown) => invoke(CH.productsUpdate, id, patch),
     remove: (id: number) => invoke(CH.productsRemove, id),
+    import: (rows: unknown) => invoke(CH.productsImport, rows),
   },
   sales: {
     list: () => invoke(CH.salesList),

@@ -1,5 +1,11 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import type { NewProduct, Product, ProductPatch } from '../../../../shared/ipc-types';
+import type {
+  NewProduct,
+  Product,
+  ProductImportResult,
+  ProductImportRow,
+  ProductPatch,
+} from '../../../../shared/ipc-types';
 import { ElectronBridgeService } from './electron-bridge.service';
 
 @Injectable({ providedIn: 'root' })
@@ -44,5 +50,11 @@ export class ProductsService {
   async remove(id: number): Promise<void> {
     await this.bridge.unwrap(this.bridge.api.products.remove(id));
     await this.refresh();
+  }
+
+  async import(rows: ProductImportRow[]): Promise<ProductImportResult> {
+    const result = await this.bridge.unwrap(this.bridge.api.products.import(rows));
+    await this.refresh();
+    return result;
   }
 }

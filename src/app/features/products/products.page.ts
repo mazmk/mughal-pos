@@ -20,6 +20,7 @@ import { ProductsService } from '../../core/services/products.service';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { ProductFormDialog } from './product-form.dialog';
+import { ProductImportDialog } from './product-import.dialog';
 
 @Component({
   selector: 'app-products-page',
@@ -107,6 +108,17 @@ export class ProductsPage implements OnInit {
     } catch (err) {
       this.snack.open(err instanceof Error ? err.message : String(err), 'Dismiss', { duration: 4000 });
     }
+  }
+
+  async importProducts(): Promise<void> {
+    const ref = this.dialog.open(ProductImportDialog, { width: '640px' });
+    const result = await firstValueFrom(ref.afterClosed());
+    if (!result) return;
+    void this.categories.refresh();
+    const parts = [`Imported ${result.created} product${result.created === 1 ? '' : 's'}`];
+    if (result.categoriesCreated) parts.push(`${result.categoriesCreated} new categories`);
+    if (result.skipped) parts.push(`${result.skipped} already existed`);
+    this.snack.open(parts.join(', '), 'OK', { duration: 5000 });
   }
 
   async edit(p: Product): Promise<void> {
