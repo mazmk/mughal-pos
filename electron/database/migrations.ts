@@ -2,6 +2,7 @@ import type Database from 'better-sqlite3';
 import { migration_001_initial } from './migrations/001_initial';
 import { migration_002_products_soft_delete } from './migrations/002_products_soft_delete';
 import { migration_003_sale_item_cost } from './migrations/003_sale_item_cost';
+import { migration_004_expense_types } from './migrations/004_expense_types';
 
 /**
  * Each migration bumps schema_version by exactly 1.
@@ -23,6 +24,7 @@ const migrations: readonly Migration[] = [
   migration_001_initial,
   migration_002_products_soft_delete,
   migration_003_sale_item_cost,
+  migration_004_expense_types,
 ];
 
 /** Highest schema version this build of the app knows how to run. */

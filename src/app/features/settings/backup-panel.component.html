@@ -57,18 +57,15 @@
         >
           Automatic daily backup
         </mat-slide-toggle>
-        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="w-40">
-          <mat-label>Keep last</mat-label>
-          <mat-select
-            [value]="autoKeep()"
-            (selectionChange)="setAutoKeep($event.value)"
-            [disabled]="!autoEnabled() || busy() !== null"
-          >
-            @for (n of keepOptions; track n) {
-              <mat-option [value]="n">{{ n }} days</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+        <app-autocomplete-field
+          class="w-40"
+          label="Keep last"
+          subscriptSizing="dynamic"
+          [options]="keepOptions"
+          [ngModel]="autoKeep()"
+          (ngModelChange)="setAutoKeep($event)"
+          [disabled]="!autoEnabled() || busy() !== null"
+        />
       </div>
     </div>
 

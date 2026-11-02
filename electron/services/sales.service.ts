@@ -1,7 +1,6 @@
 import { getDatabase } from '../database/connection';
 import { productsRepository } from './products.repository';
 import type { NewSale, Sale, SaleItem } from '../../shared/ipc-types';
-import { recordMovement } from './stock.service';
 
 /**
  * What a row of `sales` earned: takings after discount, less tax and what the
@@ -185,16 +184,6 @@ export const salesService = {
           line,
           item.taxRate ?? 0
         );
-        // Decrement stock via the enforced ledger path. recordMovement will
-        // throw if the sale would drive stock negative.
-        recordMovement({
-          productId: item.productId,
-          reason: 'sale',
-          quantity: -item.quantity,
-          referenceType: 'sale',
-          referenceId: saleId,
-          note: `Sold via ${reference}`,
-        });
       }
 
       return saleId;
@@ -205,30 +194,16 @@ export const salesService = {
     return sale;
   },
 
-  /** Void a completed sale — restore stock as 'return' movements. */
+  /** Void a completed sale: it stays on record but no longer counts towards revenue or profit. */
   void(id: number): Sale {
-    const db = getDatabase();
-    const tx = db.transaction(() => {
-      const current = loadWithItems(id);
-      if (!current) throw new Error(`Sale ${id} not found`);
-      if (current.status === 'voided') return;
-      for (const item of current.items) {
-        recordMovement({
-          productId: item.productId,
-          reason: 'return',
-          quantity: item.quantity,
-          referenceType: 'sale-void',
-          referenceId: id,
-          note: `Void of ${current.reference}`,
-        });
-      }
-      db.prepare(
-        `UPDATE sales SET status = 'voided', updated_at = datetime('now') WHERE id = ?`
-      ).run(id);
-    });
-    tx();
-    const result = loadWithItems(id);
-    if (!result) throw new Error(`Sale ${id} missing after void`);
-    return result;
+    getDatabase()
+      .prepare(
+        `UPDATE sales SET status = 'voided', updated_at = datetime('now')
+         WHERE id = ? AND status != 'voided'`
+      )
+      .run(id);
+    const voided = loadWithItems(id);
+    if (!voided) throw new Error(`Sale ${id} not found`);
+    return voided;
   },
 };

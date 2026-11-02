@@ -187,10 +187,8 @@ function countRows(db: Database.Database): BackupCounts {
   return {
     products: count(softDeletes ? 'products WHERE is_deleted = 0' : 'products'),
     categories: count('categories'),
-    suppliers: count('suppliers'),
     sales: count('sales'),
-    purchases: count('purchases'),
-    stockMovements: count('stock_movements'),
+    expenses: count('expenses'),
   };
 }
 

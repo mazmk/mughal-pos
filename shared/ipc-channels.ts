@@ -21,31 +21,12 @@ export const IPC_CHANNELS = {
     update: 'categories:update',
     remove: 'categories:remove',
   },
-  suppliers: {
-    list: 'suppliers:list',
-    get: 'suppliers:get',
-    create: 'suppliers:create',
-    update: 'suppliers:update',
-    remove: 'suppliers:remove',
-  },
   products: {
     list: 'products:list',
     get: 'products:get',
     create: 'products:create',
     update: 'products:update',
     remove: 'products:remove',
-    lowStock: 'products:low-stock',
-  },
-  stock: {
-    list: 'stock:list',
-    adjust: 'stock:adjust',
-  },
-  purchases: {
-    list: 'purchases:list',
-    get: 'purchases:get',
-    create: 'purchases:create',
-    receive: 'purchases:receive',
-    cancel: 'purchases:cancel',
   },
   sales: {
     list: 'sales:list',
@@ -53,12 +34,22 @@ export const IPC_CHANNELS = {
     create: 'sales:create',
     void: 'sales:void',
   },
+  expenses: {
+    list: 'expenses:list',
+    create: 'expenses:create',
+    update: 'expenses:update',
+    remove: 'expenses:remove',
+    pickAttachments: 'expenses:pick-attachments',
+    attachment: 'expenses:attachment',
+    openAttachment: 'expenses:open-attachment',
+  },
   dashboard: {
     metrics: 'dashboard:metrics',
   },
   reports: {
     sales: 'reports:sales',
     topProducts: 'reports:top-products',
+    expensesByType: 'reports:expenses-by-type',
   },
   backup: {
     create: 'backup:create',

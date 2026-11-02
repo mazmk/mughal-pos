@@ -90,11 +90,18 @@ src/styles.scss, src/styles/_theme.scss   global styles + M3 theme
 
 Handlers return data or throw; `handle()` converts to `{ ok, data } | { ok: false, error }`. Never return error objects manually.
 
-### Inventory invariant
-`products.stock_on_hand` is a cache. **Never UPDATE it directly.** Every stock
-delta goes through `electron/services/stock.service.ts > recordMovement()`
-which writes the `stock_movements` ledger row and the cache in one
-transaction. Sales, purchases, adjustments, returns all use it.
+### No stock tracking
+The shop counts stock outside the app. Selling never checks or changes stock,
+and there are no purchase or supplier screens. The `stock_on_hand`,
+`reorder_level`, `stock_movements`, `purchases`, `purchase_items` and
+`suppliers` columns/tables remain only so old databases and backups still open;
+nothing reads or writes them. Do not reintroduce stock checks without an
+explicit request.
+
+### Expenses
+- Types are fixed: `utility`, `stock` (money spent buying goods to sell), `staff` (money a team member took), `other`. Labels and icons live in `src/app/shared/expense-types.ts`.
+- **Net profit = profit on sales − expenses other than `stock`.** Profit already subtracts each sold item's cost price, so subtracting stock bought as well would count that cost twice. The rule lives in `dashboard.service.ts` (`OTHER_EXPENSE_SQL`); reports show stock bought separately.
+- Attachments (JPEG or PDF) are BLOBs in `expense_attachments`, so backups carry them. Files are picked and normalised in main (`attachments.service.ts`: images resized and re-encoded as JPEG), sent to the renderer as base64, and re-checked by `decode()` (type, magic bytes, size) when saved. Never select `data` in list queries; load one file at a time.
 
 ### Backup & restore (`electron/services/backup.service.ts`)
 - Never write into `TuckShop/backups/` directly or open a backup/user-picked file read-write — validate on a copy in `backups/.staging`, then publish via `finalizeSnapshot()` (integrity check + SHA-256 + manifest).
@@ -111,12 +118,12 @@ transaction. Sales, purchases, adjustments, returns all use it.
 ### Database
 - Schema changes = a new file `electron/database/migrations/NNN_description.ts`, appended to the array in `migrations.ts`. Never edit an applied migration.
 - A migration that rebuilds a table other tables reference must set `foreignKeysOff: true`.
-- Products are soft-deleted (`is_deleted = 1`), never removed. Queries for current products filter `is_deleted = 0`; history joins (sales, purchases, stock ledger, reports) must not. New sales, purchases and stock adjustments call `productsRepository.assertNotDeleted()`. SKU and barcode are unique among non-deleted products only.
+- Products are soft-deleted (`is_deleted = 1`), never removed. Queries for current products filter `is_deleted = 0`; history joins (sales, reports) must not. New sales call `productsRepository.assertNotDeleted()`. SKU and barcode are unique among non-deleted products only.
 - Multi-statement writes run inside `db.transaction(...)`.
 - Always parameterized statements (`?`), never string-built SQL with user input.
 - Money is stored and computed as numbers today; round for display with the `money` pipe, do not round in storage.
 - Timestamps are stored in UTC (`datetime('now')`, no zone marker) and shown on the computer's clock. Display them with the `appDate` pipe, never `new Date(value)` on a raw value. SQL that groups or filters by calendar day must use the `'localtime'` modifier: `date(sold_at, 'localtime')`.
-- Profit is `total_amount - tax_amount - quantity × unit_cost` over a sale's items, defined once as `SALE_PROFIT_SQL` in `sales.service.ts`. `sale_items.unit_cost` is copied from the product at sale time so later cost changes leave past sales alone. Receiving a purchase sets `products.cost_price` to the price paid.
+- Profit is `total_amount - tax_amount - quantity × unit_cost` over a sale's items, defined once as `SALE_PROFIT_SQL` in `sales.service.ts`. `sale_items.unit_cost` is copied from the product at sale time so later cost changes leave past sales alone.
 - User data lives under `<userData>/TuckShop/` (see `electron/main/paths.ts`). Store relative paths for files inside it so the folder stays portable.
 
 ---
@@ -128,6 +135,7 @@ transaction. Sales, purchases, adjustments, returns all use it.
 - Use `inject()` in new code. Business logic in services; pages stay thin.
 - Control flow: `@if`, `@for` (always with `track`), `@switch`. No `*ngIf`/`*ngFor` in new templates.
 - Forms: reactive forms in dialogs (`FormBuilder().nonNullable`); trim strings and map empty to `null` before sending.
+- Dropdowns use `shared/components/autocomplete-field` (type to filter), never `mat-select`. It works with `formControlName` and `ngModel`, takes `[options]` of `{ value, label, icon? }`, and holds only an option's value; add `clearable` when "none" is allowed.
 - Destructive actions confirm via `shared/components/confirm-dialog`. It opens on Cancel for `destructive: true`; everything else opens on the confirm button so Enter accepts.
 - Keyboard: every form uses `(appSubmit)` (`shared/directives/submit-form.directive.ts`), not `(ngSubmit)`, so Enter saves or moves to the first invalid field. Never disable a submit button for being invalid; give required fields a `<mat-error>`. Dialog submit buttons sit outside the `<form>`, joined by `type="submit" form="<id>"`.
 - When an action removes the focused element (row deleted, step changed), move focus somewhere deliberate. Icon-only buttons need an `aria-label` that names the item; `matTooltip` does not name a button.

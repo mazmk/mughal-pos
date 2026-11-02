@@ -2,38 +2,59 @@ import { getDatabase } from '../database/connection';
 import { SALE_PROFIT_SQL } from './sales.service';
 import type {
   DashboardMetrics,
+  DateRange,
+  ExpenseTypeRow,
   ReportRange,
   SalesReportRow,
   TopProductRow,
 } from '../../shared/ipc-types';
 
-// sold_at is UTC, and a shop's day runs on its own clock, hence 'localtime' throughout.
-function bucketExpression(granularity: ReportRange['granularity']): string {
+// Timestamps are UTC, and a shop's day runs on its own clock, hence 'localtime' throughout.
+function bucketExpression(granularity: ReportRange['granularity'], column: string): string {
   switch (granularity) {
-    case 'day':
-      return `strftime('%Y-%m-%d', sold_at, 'localtime')`;
     case 'week':
-      return `strftime('%Y-W%W', sold_at, 'localtime')`;
+      return `strftime('%Y-W%W', ${column}, 'localtime')`;
     case 'month':
-      return `strftime('%Y-%m', sold_at, 'localtime')`;
+      return `strftime('%Y-%m', ${column}, 'localtime')`;
     default:
-      return `strftime('%Y-%m-%d', sold_at, 'localtime')`;
+      return `strftime('%Y-%m-%d', ${column}, 'localtime')`;
   }
 }
+
+/**
+ * Stock purchases are left out of net profit: profit already takes off each
+ * sold item's cost price, so subtracting the money spent buying that stock
+ * as well would count the same cost twice.
+ */
+const OTHER_EXPENSE_SQL = `SUM(CASE WHEN type = 'stock' THEN 0 ELSE amount END)`;
+const STOCK_EXPENSE_SQL = `SUM(CASE WHEN type = 'stock' THEN amount ELSE 0 END)`;
 
 export const dashboardService = {
   metrics(): DashboardMetrics {
     const db = getDatabase();
 
-    const today = db
-      .prepare(
-        `SELECT COALESCE(SUM(total_amount), 0) AS total,
-                COUNT(*) AS count,
-                COALESCE(SUM(${SALE_PROFIT_SQL}), 0) AS profit
-         FROM sales
-         WHERE status = 'completed' AND date(sold_at, 'localtime') = date('now', 'localtime')`
-      )
-      .get() as { total: number; count: number; profit: number };
+    const sales = (day: string) =>
+      db
+        .prepare(
+          `SELECT COALESCE(SUM(total_amount), 0) AS total,
+                  COUNT(*) AS count,
+                  COALESCE(SUM(${SALE_PROFIT_SQL}), 0) AS profit
+           FROM sales
+           WHERE status = 'completed' AND strftime(?, sold_at, 'localtime') = strftime(?, 'now', 'localtime')`
+        )
+        .get(day, day) as { total: number; count: number; profit: number };
+    const today = sales('%Y-%m-%d');
+    const month = sales('%Y-%m');
+
+    const monthExpenses = (
+      db
+        .prepare(
+          `SELECT COALESCE(${OTHER_EXPENSE_SQL}, 0) AS other
+           FROM expenses
+           WHERE strftime('%Y-%m', incurred_at, 'localtime') = strftime('%Y-%m', 'now', 'localtime')`
+        )
+        .get() as { other: number }
+    ).other;
 
     const totalProducts = (
       db
@@ -41,70 +62,70 @@ export const dashboardService = {
         .get() as { c: number }
     ).c;
 
-    const lowStock = (
-      db
-        .prepare(
-          `SELECT COUNT(*) AS c
-           FROM products
-           WHERE is_active = 1 AND is_deleted = 0
-             AND reorder_level > 0 AND stock_on_hand <= reorder_level`
-        )
-        .get() as { c: number }
-    ).c;
-
-    const inventoryValue = (
-      db
-        .prepare(
-          `SELECT COALESCE(SUM(stock_on_hand * cost_price), 0) AS value
-           FROM products
-           WHERE is_active = 1 AND is_deleted = 0`
-        )
-        .get() as { value: number }
-    ).value;
-
     const categories = (
       db.prepare(`SELECT COUNT(*) AS c FROM categories`).get() as { c: number }
-    ).c;
-
-    const suppliers = (
-      db
-        .prepare(`SELECT COUNT(*) AS c FROM suppliers WHERE is_active = 1`)
-        .get() as { c: number }
     ).c;
 
     return {
       todaySalesAmount: today.total,
       todaySalesCount: today.count,
       todayProfit: today.profit,
+      monthSalesAmount: month.total,
+      monthProfit: month.profit,
+      monthExpenses,
+      monthNetProfit: month.profit - monthExpenses,
       totalProducts,
-      lowStockProducts: lowStock,
-      inventoryValue,
       activeCategories: categories,
-      activeSuppliers: suppliers,
     };
   },
 
+  /** One row per period that has a sale or an expense. */
   salesReport(range: ReportRange): SalesReportRow[] {
-    const bucket = bucketExpression(range.granularity);
     const rows = getDatabase()
       .prepare(
-        `SELECT ${bucket} AS bucket,
-                COUNT(*) AS sales_count,
-                COALESCE(SUM(total_amount), 0) AS total_amount,
-                COALESCE(SUM(tax_amount), 0) AS tax_amount,
-                COALESCE(SUM(discount_amount), 0) AS discount_amount
-         FROM sales
-         WHERE status = 'completed'
-           AND date(sold_at, 'localtime') BETWEEN date(?) AND date(?)
-         GROUP BY bucket
-         ORDER BY bucket`
+        `WITH s AS (
+           SELECT ${bucketExpression(range.granularity, 'sold_at')} AS bucket,
+                  COUNT(*) AS sales_count,
+                  SUM(total_amount) AS total_amount,
+                  SUM(tax_amount) AS tax_amount,
+                  SUM(discount_amount) AS discount_amount,
+                  SUM(${SALE_PROFIT_SQL}) AS profit
+           FROM sales
+           WHERE status = 'completed'
+             AND date(sold_at, 'localtime') BETWEEN date(@from) AND date(@to)
+           GROUP BY bucket
+         ),
+         e AS (
+           SELECT ${bucketExpression(range.granularity, 'incurred_at')} AS bucket,
+                  ${STOCK_EXPENSE_SQL} AS stock_expenses,
+                  ${OTHER_EXPENSE_SQL} AS other_expenses
+           FROM expenses
+           WHERE date(incurred_at, 'localtime') BETWEEN date(@from) AND date(@to)
+           GROUP BY bucket
+         ),
+         buckets AS (SELECT bucket FROM s UNION SELECT bucket FROM e)
+         SELECT b.bucket,
+                COALESCE(s.sales_count, 0) AS sales_count,
+                COALESCE(s.total_amount, 0) AS total_amount,
+                COALESCE(s.tax_amount, 0) AS tax_amount,
+                COALESCE(s.discount_amount, 0) AS discount_amount,
+                COALESCE(s.profit, 0) AS profit,
+                COALESCE(e.stock_expenses, 0) AS stock_expenses,
+                COALESCE(e.other_expenses, 0) AS other_expenses
+         FROM buckets b
+         LEFT JOIN s ON s.bucket = b.bucket
+         LEFT JOIN e ON e.bucket = b.bucket
+         ORDER BY b.bucket`
       )
-      .all(range.from, range.to) as Array<{
+      .all({ from: range.from, to: range.to }) as Array<{
       bucket: string;
       sales_count: number;
       total_amount: number;
       tax_amount: number;
       discount_amount: number;
+      profit: number;
+      stock_expenses: number;
+      other_expenses: number;
     }>;
 
     return rows.map((r) => ({
@@ -113,7 +134,23 @@ export const dashboardService = {
       totalAmount: r.total_amount,
       taxAmount: r.tax_amount,
       discountAmount: r.discount_amount,
+      profit: r.profit,
+      stockExpenses: r.stock_expenses,
+      otherExpenses: r.other_expenses,
+      netProfit: r.profit - r.other_expenses,
     }));
+  },
+
+  expensesByType(range: DateRange): ExpenseTypeRow[] {
+    return getDatabase()
+      .prepare(
+        `SELECT type, COUNT(*) AS count, SUM(amount) AS amount
+         FROM expenses
+         WHERE date(incurred_at, 'localtime') BETWEEN date(?) AND date(?)
+         GROUP BY type
+         ORDER BY amount DESC`
+      )
+      .all(range.from, range.to) as ExpenseTypeRow[];
   },
 
   topProducts(range: ReportRange, limit = 10): TopProductRow[] {

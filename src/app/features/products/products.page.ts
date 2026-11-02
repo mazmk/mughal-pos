@@ -52,7 +52,7 @@ export class ProductsPage implements OnInit {
     'name',
     'category',
     'unitPrice',
-    'stock',
+    'costPrice',
     'status',
     'actions',
   ] as const;
@@ -125,7 +125,7 @@ export class ProductsPage implements OnInit {
     const ref = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Delete product?',
-        message: `Delete "${p.name}"? It will no longer appear in the shop. Past sales, purchases and stock history keep it, and its SKU and barcode can be used again.`,
+        message: `Delete "${p.name}"? It will no longer appear in the shop. Past sales keep it, and its SKU and barcode can be used again.`,
         destructive: true,
         confirmLabel: 'Delete',
       },

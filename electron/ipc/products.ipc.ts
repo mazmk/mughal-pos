@@ -19,7 +19,6 @@ function parseNewProduct(raw: unknown): NewProduct {
       ? null
       : assertString(o['imagePath'], 'imagePath'),
     isActive: (o['isActive'] === 1 || o['isActive'] === 0 ? o['isActive'] : 1) as 0 | 1,
-    reorderLevel: assertNumber(o['reorderLevel'] ?? 0, 'reorderLevel'),
   };
 }
 
@@ -37,7 +36,6 @@ function parsePatch(raw: unknown): ProductPatch {
   if ('imagePath' in o)
     patch.imagePath = o['imagePath'] === null ? null : assertString(o['imagePath'], 'imagePath');
   if ('isActive' in o) patch.isActive = (o['isActive'] ? 1 : 0) as 0 | 1;
-  if ('reorderLevel' in o) patch.reorderLevel = assertNumber(o['reorderLevel'], 'reorderLevel');
   return patch;
 }
 
@@ -59,6 +57,4 @@ export function registerProductsIpc(): void {
   handle<[number], { id: number }>(IPC_CHANNELS.products.remove, (_e, id) =>
     productsRepository.remove(assertNumber(id, 'id'))
   );
-
-  handle<[], Product[]>(IPC_CHANNELS.products.lowStock, () => productsRepository.lowStock());
 }

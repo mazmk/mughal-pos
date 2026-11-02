@@ -1,7 +1,7 @@
 <div class="flex flex-col gap-6">
   <header>
     <h1 class="m-0 text-2xl font-semibold tracking-tight">Reports</h1>
-    <p class="m-0 mt-1 text-sm opacity-70">Sales performance over a chosen date range.</p>
+    <p class="m-0 mt-1 text-sm opacity-70">Revenue, profit and expenses for any dates, by day, week or month.</p>
   </header>
 
   <mat-card appearance="outlined" class="!rounded-xl">
@@ -18,51 +18,77 @@
         <mat-datepicker-toggle matIconSuffix [for]="dpTo"></mat-datepicker-toggle>
         <mat-datepicker #dpTo></mat-datepicker>
       </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>Granularity</mat-label>
-        <mat-select [ngModel]="granularity()" (ngModelChange)="granularity.set($event)">
-          <mat-option value="day">Daily</mat-option>
-          <mat-option value="week">Weekly</mat-option>
-          <mat-option value="month">Monthly</mat-option>
-        </mat-select>
-      </mat-form-field>
-      <button mat-flat-button color="primary" class="!mt-2" (click)="run()">
-        <mat-icon>analytics</mat-icon>
-        Run report
-      </button>
+      <app-autocomplete-field
+        label="Granularity"
+        [options]="granularityOptions"
+        [ngModel]="granularity()"
+        (ngModelChange)="granularity.set($event)"
+      />
+      <div class="flex flex-wrap gap-2 !mt-2">
+        <button mat-flat-button color="primary" (click)="run()">
+          <mat-icon>analytics</mat-icon>
+          Run report
+        </button>
+        <button mat-stroked-button (click)="setRange('this-month')">This month</button>
+        <button mat-stroked-button (click)="setRange('last-month')">Last month</button>
+        <button mat-stroked-button (click)="setRange('this-year')">This year</button>
+      </div>
     </mat-card-content>
   </mat-card>
 
-  <section class="grid gap-4 grid-cols-2 xl:grid-cols-4">
-    <mat-card appearance="outlined" class="!rounded-xl">
-      <mat-card-content class="flex flex-col gap-1 !p-5">
-        <span class="text-xs uppercase tracking-wide opacity-70">Sales</span>
-        <span class="text-2xl font-semibold">{{ totals().sales }}</span>
-      </mat-card-content>
-    </mat-card>
+  <section class="grid gap-4 grid-cols-[repeat(auto-fit,minmax(min(100%,12rem),1fr))]">
     <mat-card appearance="outlined" class="!rounded-xl">
       <mat-card-content class="flex flex-col gap-1 !p-5">
         <span class="text-xs uppercase tracking-wide opacity-70">Revenue</span>
         <span class="text-2xl font-semibold">{{ totals().revenue | money }}</span>
+        <span class="text-xs opacity-70">{{ totals().sales }} sale{{ totals().sales === 1 ? '' : 's' }}</span>
       </mat-card-content>
     </mat-card>
     <mat-card appearance="outlined" class="!rounded-xl">
       <mat-card-content class="flex flex-col gap-1 !p-5">
-        <span class="text-xs uppercase tracking-wide opacity-70">Tax</span>
-        <span class="text-2xl font-semibold">{{ totals().tax | money }}</span>
+        <span class="text-xs uppercase tracking-wide opacity-70">Profit on sales</span>
+        <span class="text-2xl font-semibold">{{ totals().profit | money }}</span>
+        <span class="text-xs opacity-70">After cost price and tax</span>
       </mat-card-content>
     </mat-card>
     <mat-card appearance="outlined" class="!rounded-xl">
       <mat-card-content class="flex flex-col gap-1 !p-5">
-        <span class="text-xs uppercase tracking-wide opacity-70">Discounts</span>
-        <span class="text-2xl font-semibold">{{ totals().discount | money }}</span>
+        <span class="text-xs uppercase tracking-wide opacity-70">Expenses</span>
+        <span class="text-2xl font-semibold">{{ totals().otherExpenses | money }}</span>
+        <span class="text-xs opacity-70">Bills, team and other</span>
+      </mat-card-content>
+    </mat-card>
+    <mat-card appearance="outlined" class="!rounded-xl">
+      <mat-card-content class="flex flex-col gap-1 !p-5">
+        <span class="flex items-center gap-1 text-xs uppercase tracking-wide opacity-70">
+          @if (totals().netProfit < 0) {
+            <mat-icon class="!text-base !h-4 !w-4">trending_down</mat-icon> Net loss
+          } @else {
+            Net profit
+          }
+        </span>
+        <span class="text-2xl font-semibold" [class.text-error]="totals().netProfit < 0">{{ totals().netProfit | money }}</span>
+        <span class="text-xs opacity-70">Profit minus expenses</span>
+      </mat-card-content>
+    </mat-card>
+    <mat-card appearance="outlined" class="!rounded-xl">
+      <mat-card-content class="flex flex-col gap-1 !p-5">
+        <span class="text-xs uppercase tracking-wide opacity-70">Stock bought</span>
+        <span class="text-2xl font-semibold">{{ totals().stockExpenses | money }}</span>
+        <span class="text-xs opacity-70">Not taken off net profit</span>
       </mat-card-content>
     </mat-card>
   </section>
 
+  <p class="m-0 -mt-2 text-sm opacity-80">
+    Revenue includes tax of {{ totals().tax | money }}, after {{ totals().discount | money }} of discounts.
+    Money spent buying stock is shown but not taken off net profit, because profit on sales already
+    subtracts each item's cost price.
+  </p>
+
   <mat-card appearance="outlined" class="!rounded-xl">
     <mat-card-header>
-      <mat-card-title class="!text-base !font-semibold">Sales over time</mat-card-title>
+      <mat-card-title class="!text-base !font-semibold">Profit over time</mat-card-title>
     </mat-card-header>
     <mat-card-content class="!p-0">
       @if (loading()) {
@@ -70,7 +96,7 @@
           <mat-spinner diameter="32" />
         </div>
       } @else if (rows().length === 0) {
-        <div class="p-10 text-center opacity-70">No completed sales in this range.</div>
+        <div class="p-10 text-center opacity-70">No sales or expenses in this range.</div>
       } @else {
         <table mat-table [dataSource]="rows()" class="!w-full">
           <ng-container matColumnDef="bucket">
@@ -85,16 +111,59 @@
             <th mat-header-cell *matHeaderCellDef class="!text-right">Revenue</th>
             <td mat-cell *matCellDef="let r" class="!text-right !font-medium">{{ r.totalAmount | money }}</td>
           </ng-container>
-          <ng-container matColumnDef="taxAmount">
-            <th mat-header-cell *matHeaderCellDef class="!text-right">Tax</th>
-            <td mat-cell *matCellDef="let r" class="!text-right">{{ r.taxAmount | money }}</td>
+          <ng-container matColumnDef="profit">
+            <th mat-header-cell *matHeaderCellDef class="!text-right">Profit</th>
+            <td mat-cell *matCellDef="let r" class="!text-right">{{ r.profit | money }}</td>
           </ng-container>
-          <ng-container matColumnDef="discountAmount">
-            <th mat-header-cell *matHeaderCellDef class="!text-right">Discount</th>
-            <td mat-cell *matCellDef="let r" class="!text-right">{{ r.discountAmount | money }}</td>
+          <ng-container matColumnDef="otherExpenses">
+            <th mat-header-cell *matHeaderCellDef class="!text-right">Expenses</th>
+            <td mat-cell *matCellDef="let r" class="!text-right">{{ r.otherExpenses | money }}</td>
+          </ng-container>
+          <ng-container matColumnDef="netProfit">
+            <th mat-header-cell *matHeaderCellDef class="!text-right">Net profit</th>
+            <td mat-cell *matCellDef="let r" class="!text-right !font-semibold" [class.text-error]="r.netProfit < 0">
+              {{ r.netProfit | money }}
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="stockExpenses">
+            <th mat-header-cell *matHeaderCellDef class="!text-right">Stock bought</th>
+            <td mat-cell *matCellDef="let r" class="!text-right opacity-80">{{ r.stockExpenses | money }}</td>
           </ng-container>
           <tr mat-header-row *matHeaderRowDef="salesColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: salesColumns"></tr>
+        </table>
+      }
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card appearance="outlined" class="!rounded-xl">
+    <mat-card-header>
+      <mat-card-title class="!text-base !font-semibold">Expenses by type</mat-card-title>
+    </mat-card-header>
+    <mat-card-content class="!p-0">
+      @if (expenseTypes().length === 0) {
+        <div class="p-10 text-center opacity-70">No expenses in this range.</div>
+      } @else {
+        <table mat-table [dataSource]="expenseTypes()" class="!w-full">
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef>Type</th>
+            <td mat-cell *matCellDef="let r">
+              <span class="flex items-center gap-2 whitespace-nowrap">
+                <mat-icon class="!text-lg !h-5 !w-5">{{ typeOf(r.type).icon }}</mat-icon>
+                {{ typeOf(r.type).label }}
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="count">
+            <th mat-header-cell *matHeaderCellDef class="!text-right">Entries</th>
+            <td mat-cell *matCellDef="let r" class="!text-right">{{ r.count }}</td>
+          </ng-container>
+          <ng-container matColumnDef="amount">
+            <th mat-header-cell *matHeaderCellDef class="!text-right">Amount</th>
+            <td mat-cell *matCellDef="let r" class="!text-right !font-medium">{{ r.amount | money }}</td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="expenseColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: expenseColumns"></tr>
         </table>
       }
     </mat-card-content>

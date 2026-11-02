@@ -70,8 +70,8 @@ src/app/
   shared/           reusable components, pipes, utilities
   layout/           app shell (sidenav + toolbar) and navigation config
   features/
-    dashboard/ pos/ products/ categories/ inventory/ stock/
-    suppliers/ purchases/ sales/ reports/ settings/
+    dashboard/ pos/ products/ categories/ sales/ expenses/
+    reports/ settings/
 ```
 
 Every feature is a lazy-loaded standalone component. Business logic lives in
@@ -93,6 +93,7 @@ electron/
       001_initial.ts  initial schema
       002_products_soft_delete.ts
       003_sale_item_cost.ts
+      004_expense_types.ts
   ipc/
     ipc-wrapper.ts  centralized handler wrapper (error envelope + validation)
     health.ipc.ts   db version / paths / platform
@@ -100,8 +101,9 @@ electron/
     products.ipc.ts product CRUD
     index.ts        registers all handlers at startup
   services/
-    stock.service.ts        the ONLY path for stock changes
-    products.repository.ts  product repository (CRUD only, no stock writes)
+    products.repository.ts  product repository
+    expenses.service.ts     expenses and their attachments
+    attachments.service.ts  picks, shrinks and checks attached files
     settings.repository.ts  settings repository
 shared/
   ipc-channels.ts   allow-listed channel names
@@ -109,16 +111,12 @@ shared/
   api-contract.ts   MughalApi shape exposed on window.api
 ```
 
-### Inventory invariant
+### What the app tracks
 
-> **Stock quantity is never updated directly.** Every delta flows through
-> `services/stock.service.ts > recordMovement()`, which inserts a row in
-> `stock_movements` AND updates the cached `products.stock_on_hand` in a single
-> transaction. Rebuilding stock from the ledger is possible via
-> `rebuildStockCache()`.
-
-Supported movement reasons: `opening`, `sale`, `restock`, `damage`,
-`adjustment`, `return`.
+Sales, revenue, profit and expenses. Stock is counted outside the app, so the
+POS never checks quantities and there are no purchase or supplier screens.
+Reports show revenue, profit on sales, expenses and net profit by day, week or
+month over any date range.
 
 ### Security defaults
 
@@ -359,21 +357,22 @@ A bare `electron .` does not — run `unset ELECTRON_RUN_AS_NODE` (bash) or
 | `npm run rebuild:native`     | Rebuild `better-sqlite3` against the current Electron    |
 | `npm run smoke:db`           | Headless SQLite layer smoke test                         |
 | `npm run smoke:ipc`          | Electron + IPC bridge smoke test                         |
-| `npm run smoke:full`         | End-to-end smoke: categories → sale → report → backup    |
+| `npm run smoke:full`         | End-to-end smoke: categories → sale → expense → backup   |
 | `npm run format`             | Prettier format all source                               |
 
 ---
 
-## Database schema (v3)
+## Database schema (v4)
 
 - `categories` — product categorization
-- `suppliers` — vendors
-- `products` — SKUs with cached `stock_on_hand`
-- `stock_movements` — immutable ledger of every stock change
-- `purchases` + `purchase_items` — incoming stock orders
+- `products` — SKUs, selling price and cost price
 - `sales` + `sale_items` — completed transactions, with each item's cost at sale time
-- `expenses` — misc. shop expenses
+- `expenses` — typed expenses (utility bill, stock bought, taken by team member, other)
+- `expense_attachments` — photos (JPEG) and PDFs attached to expenses, stored in the database
 - `settings` — key / value store for shop preferences
+
+`suppliers`, `stock_movements`, `purchases` and `purchase_items` are left over
+from when the app tracked stock. They stay so older backups still restore.
 
 All tables use `INTEGER PRIMARY KEY AUTOINCREMENT`, foreign-key constraints
 (enforced via `PRAGMA foreign_keys = ON`), and `datetime('now')` timestamps,
@@ -381,6 +380,9 @@ which are UTC in storage and shown in the computer's time zone.
 WAL mode is enabled for better concurrent reads.
 
 Profit on a sale is its total, minus tax, minus what the items cost. A
-product's cost comes from its product form and updates to the price paid when a
-purchase is received. Products with no cost show their full selling price as
-profit, so set a cost on every product.
+product's cost comes from its product form. Products with no cost show their
+full selling price as profit, so set a cost on every product.
+
+Net profit is profit on sales minus expenses, leaving out money spent buying
+stock: each item's cost price is already taken off in profit, so subtracting
+the stock bill too would count it twice.

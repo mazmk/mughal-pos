@@ -8,32 +8,33 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
 import type {
+  ExpenseTypeRow,
   ReportRange,
   SalesReportRow,
   TopProductRow,
 } from '../../../../shared/ipc-types';
 import { ReportsService } from '../../core/services/reports.service';
+import { monthRange, toISODate } from '../../shared/dates';
+import { expenseType } from '../../shared/expense-types';
 import { MoneyPipe } from '../../shared/pipes/money.pipe';
-
-function toISODate(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
+import {
+  AutocompleteFieldComponent,
+  type AutocompleteOption,
+} from '../../shared/components/autocomplete-field/autocomplete-field.component';
 
 @Component({
   selector: 'app-reports-page',
   standalone: true,
   imports: [
+    AutocompleteFieldComponent,
     CommonModule,
     FormsModule,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
-    MatSelectModule,
     MatDatepickerModule,
     MatButtonModule,
     MatIconModule,
@@ -47,26 +48,63 @@ export class ReportsPage implements OnInit {
   private readonly reports = inject(ReportsService);
   private readonly snack = inject(MatSnackBar);
 
-  readonly from = signal<Date | null>(new Date(Date.now() - 30 * 86400_000));
-  readonly to = signal<Date | null>(new Date());
+  readonly from = signal<Date | null>(monthRange().from);
+  readonly to = signal<Date | null>(monthRange().to);
   readonly granularity = signal<ReportRange['granularity']>('day');
+  readonly granularityOptions: readonly AutocompleteOption<ReportRange['granularity']>[] = [
+    { value: 'day', label: 'Daily' },
+    { value: 'week', label: 'Weekly' },
+    { value: 'month', label: 'Monthly' },
+  ];
 
   readonly rows = signal<SalesReportRow[]>([]);
   readonly top = signal<TopProductRow[]>([]);
+  readonly expenseTypes = signal<ExpenseTypeRow[]>([]);
   readonly loading = signal(false);
+  readonly typeOf = expenseType;
 
-  readonly salesColumns = ['bucket', 'salesCount', 'totalAmount', 'taxAmount', 'discountAmount'] as const;
+  readonly salesColumns = [
+    'bucket',
+    'salesCount',
+    'totalAmount',
+    'profit',
+    'otherExpenses',
+    'netProfit',
+    'stockExpenses',
+  ] as const;
   readonly topColumns = ['sku', 'name', 'quantitySold', 'revenue'] as const;
+  readonly expenseColumns = ['type', 'count', 'amount'] as const;
 
   readonly totals = computed(() => {
     const r = this.rows();
+    const sum = (pick: (row: SalesReportRow) => number) => r.reduce((s, x) => s + pick(x), 0);
     return {
-      sales: r.reduce((s, x) => s + x.salesCount, 0),
-      revenue: r.reduce((s, x) => s + x.totalAmount, 0),
-      tax: r.reduce((s, x) => s + x.taxAmount, 0),
-      discount: r.reduce((s, x) => s + x.discountAmount, 0),
+      sales: sum((x) => x.salesCount),
+      revenue: sum((x) => x.totalAmount),
+      tax: sum((x) => x.taxAmount),
+      discount: sum((x) => x.discountAmount),
+      profit: sum((x) => x.profit),
+      stockExpenses: sum((x) => x.stockExpenses),
+      otherExpenses: sum((x) => x.otherExpenses),
+      netProfit: sum((x) => x.netProfit),
     };
   });
+
+  /** Quick ranges. A whole year reads best month by month. */
+  setRange(preset: 'this-month' | 'last-month' | 'this-year'): void {
+    if (preset === 'this-year') {
+      const year = new Date().getFullYear();
+      this.from.set(new Date(year, 0, 1));
+      this.to.set(new Date(year, 11, 31));
+      this.granularity.set('month');
+    } else {
+      const { from, to } = monthRange(preset === 'this-month' ? 0 : -1);
+      this.from.set(from);
+      this.to.set(to);
+      this.granularity.set('day');
+    }
+    void this.run();
+  }
 
   /** 2026-11-01 → 01/11/2026 and 2026-11 → 11/2026. Week buckets (2026-W44) stay as they are. */
   bucketLabel(bucket: string): string {
@@ -93,12 +131,14 @@ export class ReportsPage implements OnInit {
     };
     this.loading.set(true);
     try {
-      const [sales, top] = await Promise.all([
+      const [sales, top, expenseTypes] = await Promise.all([
         this.reports.sales(range),
         this.reports.topProducts(range, 10),
+        this.reports.expensesByType(range),
       ]);
       this.rows.set(sales);
       this.top.set(top);
+      this.expenseTypes.set(expenseTypes);
     } catch (err) {
       this.snack.open(err instanceof Error ? err.message : String(err), 'Dismiss', {
         duration: 4000,

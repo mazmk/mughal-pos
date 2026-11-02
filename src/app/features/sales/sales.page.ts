@@ -54,7 +54,7 @@ export class SalesPage implements OnInit {
     const ref = this.dialog.open(ConfirmDialogComponent, {
       data: {
         title: 'Void sale?',
-        message: `Void ${s.reference}? Stock will be returned to inventory as a 'return' movement.`,
+        message: `Void ${s.reference}? It stays in the list, but no longer counts towards revenue or profit.`,
         destructive: true,
         confirmLabel: 'Void',
       },

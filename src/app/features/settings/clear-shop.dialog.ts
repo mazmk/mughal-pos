@@ -19,10 +19,8 @@ const CONFIRM_WORD = 'CLEAR';
 const COUNT_ROWS: readonly { key: keyof BackupCounts; label: string }[] = [
   { key: 'products', label: 'Products' },
   { key: 'categories', label: 'Categories' },
-  { key: 'suppliers', label: 'Suppliers' },
   { key: 'sales', label: 'Sales' },
-  { key: 'purchases', label: 'Purchases' },
-  { key: 'stockMovements', label: 'Stock movements' },
+  { key: 'expenses', label: 'Expenses' },
 ];
 
 type Step = 'warn' | 'confirm' | 'clearing' | 'done' | 'error';
@@ -55,8 +53,8 @@ type Step = 'warn' | 'confirm' | 'clearing' | 'done' | 'error';
               <div class="flex flex-col gap-1 text-sm">
                 <strong>Every record in this shop will be deleted.</strong>
                 <span>
-                  This includes all products, categories, suppliers, sales, purchases and stock
-                  history. Settings go back to their defaults, including the shop name and logo.
+                  This includes all products, categories, sales and expenses, with their
+                  attached files. Settings go back to their defaults, including the shop name and logo.
                 </span>
               </div>
             </div>
@@ -75,7 +73,7 @@ type Step = 'warn' | 'confirm' | 'clearing' | 'done' | 'error';
                   @for (row of rows; track row.key) {
                     <tr class="border-t border-outline-variant">
                       <td class="py-2 pr-4">{{ row.label }}</td>
-                      <td class="py-2 pl-4 text-right font-semibold">{{ current.counts[row.key] }}</td>
+                      <td class="py-2 pl-4 text-right font-semibold">{{ current.counts[row.key] ?? '—' }}</td>
                     </tr>
                   }
                 </tbody>

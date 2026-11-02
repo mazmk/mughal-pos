@@ -55,17 +55,31 @@
     width: 100%;
   }
 
-  &:hover:not(:disabled) {
+  &:hover {
     background: var(--app-card-hover);
     border-color: var(--mat-sys-primary);
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
+}
 
-  &:disabled,
-  &.out-of-stock {
-    opacity: 0.55;
-    cursor: not-allowed;
+// Quantity box between the − and + buttons, so a count can be typed instead
+// of clicked up one at a time. 40px tall to match the cart's touch targets.
+.qty-input {
+  width: 4.5rem;
+  height: 40px;
+  padding: 0 6px;
+  border: 1px solid var(--mat-sys-outline);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  text-align: center;
+
+  &:focus {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: -1px;
   }
 }
 

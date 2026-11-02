@@ -9,7 +9,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import type {
   NewSaleItem,
@@ -37,7 +36,6 @@ interface CartLine {
     MatIconModule,
     MatFormFieldModule,
     MatInputModule,
-    MatSelectModule,
     MatChipsModule,
     MatProgressSpinnerModule,
     MoneyPipe,
@@ -89,8 +87,8 @@ export class PosPage implements OnInit, AfterViewInit {
    */
   readonly activeTileId = signal<number | null>(null);
   readonly tabbableTileId = computed(() => {
-    const inStock = this.filteredProducts().filter((p) => p.stockOnHand > 0);
-    return (inStock.find((p) => p.id === this.activeTileId()) ?? inStock[0])?.id ?? null;
+    const tiles = this.filteredProducts();
+    return (tiles.find((p) => p.id === this.activeTileId()) ?? tiles[0])?.id ?? null;
   });
 
   readonly subtotal = computed(() =>
@@ -138,8 +136,8 @@ export class PosPage implements OnInit, AfterViewInit {
     if (match) {
       this.addToCart(match);
       this.search.set('');
-    } else if (matches.some((p) => p.stockOnHand > 0)) {
-      this.enabledTiles()[0]?.focus();
+    } else if (matches.length > 0) {
+      this.tiles()[0]?.focus();
     } else {
       this.snack.open(`No product matches "${this.search().trim()}"`, 'OK', { duration: 2500 });
       this.searchInput().nativeElement.select();
@@ -147,7 +145,7 @@ export class PosPage implements OnInit, AfterViewInit {
   }
 
   focusFirstTile(event: Event): void {
-    const first = this.enabledTiles()[0];
+    const first = this.tiles()[0];
     if (!first) return;
     event.preventDefault();
     first.focus();
@@ -159,7 +157,7 @@ export class PosPage implements OnInit, AfterViewInit {
       return;
     }
     const grid = event.currentTarget as HTMLElement;
-    const tiles = this.enabledTiles();
+    const tiles = this.tiles();
     const index = tiles.indexOf(event.target as HTMLButtonElement);
     const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
     const moves: Record<string, number> = {
@@ -181,9 +179,9 @@ export class PosPage implements OnInit, AfterViewInit {
     tiles[Math.max(0, Math.min(tiles.length - 1, index + move))].focus();
   }
 
-  private enabledTiles(): HTMLButtonElement[] {
+  private tiles(): HTMLButtonElement[] {
     const grid = this.productGrid()?.nativeElement;
-    return grid ? [...grid.querySelectorAll<HTMLButtonElement>('.product-tile:not(:disabled)')] : [];
+    return grid ? [...grid.querySelectorAll<HTMLButtonElement>('.product-tile')] : [];
   }
 
   private focusSearch(): void {
@@ -195,17 +193,8 @@ export class PosPage implements OnInit, AfterViewInit {
   addToCart(product: Product): void {
     const current = this.cart();
     const existing = current.find((l) => l.product.id === product.id);
-    const nextQty = (existing?.quantity ?? 0) + 1;
-    if (nextQty > product.stockOnHand) {
-      this.snack.open(
-        `Only ${product.stockOnHand} of "${product.name}" in stock`,
-        'OK',
-        { duration: 2500 }
-      );
-      return;
-    }
     if (existing) {
-      this.cart.set(current.map((l) => (l === existing ? { ...l, quantity: nextQty } : l)));
+      this.updateLine(existing, existing.quantity + 1);
     } else {
       this.cart.set([...current, { product, quantity: 1 }]);
     }
@@ -217,11 +206,31 @@ export class PosPage implements OnInit, AfterViewInit {
       this.remove(line);
       return;
     }
-    if (next > line.product.stockOnHand) {
-      this.snack.open(`Max stock reached (${line.product.stockOnHand})`, 'OK', { duration: 2000 });
-      return;
+    this.updateLine(line, next);
+  }
+
+  /**
+   * Typing in the quantity box. A blank or zero box is left alone while the
+   * cashier is still typing; leaving it (commitQuantity) puts the last good
+   * value back, so a line is only ever removed with its × button.
+   */
+  typeQuantity(line: CartLine, value: string): void {
+    const qty = parseQuantity(value);
+    if (qty !== null) this.updateLine(line, qty);
+  }
+
+  commitQuantity(line: CartLine, input: HTMLInputElement): void {
+    const qty = parseQuantity(input.value);
+    if (qty === null) {
+      const current = this.cart().find((l) => l.product.id === line.product.id);
+      input.value = String(current?.quantity ?? line.quantity);
     }
-    this.cart.set(this.cart().map((l) => (l === line ? { ...l, quantity: next } : l)));
+  }
+
+  private updateLine(line: CartLine, quantity: number): void {
+    this.cart.set(
+      this.cart().map((l) => (l.product.id === line.product.id ? { ...l, quantity } : l))
+    );
   }
 
   remove(line: CartLine): void {
@@ -278,6 +287,12 @@ export class PosPage implements OnInit, AfterViewInit {
     }
   }
 
+  /** Enter in a quantity box: done with this line, back to scanning. */
+  quantityDone(line: CartLine, input: HTMLInputElement): void {
+    this.commitQuantity(line, input);
+    this.focusSearch();
+  }
+
   private formatTotal(): string {
     try {
       return new Intl.NumberFormat('en-PK', {
@@ -288,4 +303,12 @@ export class PosPage implements OnInit, AfterViewInit {
       return this.total().toFixed(2);
     }
   }
+}
+
+/** A positive quantity, or null for blank, zero, negative or not-a-number input. */
+function parseQuantity(value: string): number | null {
+  const qty = Number(value);
+  return value.trim() !== '' && Number.isFinite(qty) && qty > 0
+    ? Math.round(qty * 1000) / 1000
+    : null;
 }

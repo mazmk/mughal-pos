@@ -23,6 +23,11 @@ function withZone(value: string | number | Date): string | number | Date {
     : value;
 }
 
+/** A stored timestamp as a Date, read as UTC when it has no zone. */
+export function parseAppDate(value: string): Date {
+  return new Date(withZone(value));
+}
+
 /** The app's one display format for dates. Returns null for empty values, like Angular's date pipe. */
 export function formatAppDate(value: DateValue, format: AppDateFormat = 'date'): string | null {
   if (value == null || value === '') return null;

@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -6,7 +7,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTableModule } from '@angular/material/table';
@@ -20,6 +20,10 @@ import {
   type ConfirmDialogData,
 } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { RestoreBackupDialog, type RestoreBackupDialogData } from './restore-backup.dialog';
+import {
+  AutocompleteFieldComponent,
+  type AutocompleteOption,
+} from '../../shared/components/autocomplete-field/autocomplete-field.component';
 
 const KIND_LABELS: Record<BackupKind, string> = {
   manual: 'Manual',
@@ -43,6 +47,8 @@ const STALE_AFTER_MS = 48 * 60 * 60 * 1000;
   selector: 'app-backup-panel',
   standalone: true,
   imports: [
+    FormsModule,
+    AutocompleteFieldComponent,
     AppDatePipe,
     MatCardModule,
     MatButtonModule,
@@ -52,7 +58,6 @@ const STALE_AFTER_MS = 48 * 60 * 60 * 1000;
     MatTooltipModule,
     MatSlideToggleModule,
     MatFormFieldModule,
-    MatSelectModule,
     MatProgressSpinnerModule,
   ],
   templateUrl: './backup-panel.component.html',
@@ -64,7 +69,10 @@ export class BackupPanelComponent implements OnInit {
   private readonly snack = inject(MatSnackBar);
 
   readonly columns = ['createdAt', 'kind', 'contents', 'size', 'status', 'actions'] as const;
-  readonly keepOptions = [7, 14, 30, 60] as const;
+  readonly keepOptions: readonly AutocompleteOption<number>[] = [7, 14, 30, 60].map((n) => ({
+    value: n,
+    label: `${n} days`,
+  }));
 
   /** Filename (or 'import') of the action in progress, to disable buttons. */
   readonly busy = signal<string | null>(null);

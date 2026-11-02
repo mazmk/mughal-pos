@@ -27,27 +27,13 @@ export const routes: Routes = [
           import('./features/categories/categories.page').then((m) => m.CategoriesPage),
       },
       {
-        path: 'inventory',
-        loadComponent: () =>
-          import('./features/inventory/inventory.page').then((m) => m.InventoryPage),
-      },
-      {
-        path: 'stock',
-        loadComponent: () => import('./features/stock/stock.page').then((m) => m.StockPage),
-      },
-      {
-        path: 'suppliers',
-        loadComponent: () =>
-          import('./features/suppliers/suppliers.page').then((m) => m.SuppliersPage),
-      },
-      {
-        path: 'purchases',
-        loadComponent: () =>
-          import('./features/purchases/purchases.page').then((m) => m.PurchasesPage),
-      },
-      {
         path: 'sales',
         loadComponent: () => import('./features/sales/sales.page').then((m) => m.SalesPage),
+      },
+      {
+        path: 'expenses',
+        loadComponent: () =>
+          import('./features/expenses/expenses.page').then((m) => m.ExpensesPage),
       },
       {
         path: 'reports',

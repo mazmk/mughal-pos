@@ -11,9 +11,6 @@ export class ProductsService {
   readonly error = signal<string | null>(null);
 
   readonly active = computed(() => this.items().filter((p) => p.isActive === 1));
-  readonly lowStock = computed(() =>
-    this.active().filter((p) => p.reorderLevel > 0 && p.stockOnHand <= p.reorderLevel)
-  );
   readonly byId = computed(() => {
     const map = new Map<number, Product>();
     for (const p of this.items()) map.set(p.id, p);

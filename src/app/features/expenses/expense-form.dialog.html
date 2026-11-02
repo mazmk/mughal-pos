@@ -1,0 +1,95 @@
+<h2 mat-dialog-title>{{ data ? 'Edit expense' : 'New expense' }}</h2>
+<mat-dialog-content>
+  <form id="expense-form" [formGroup]="form" (appSubmit)="save()" class="grid gap-x-4 gap-y-2 pt-2 sm:grid-cols-2">
+    <app-autocomplete-field
+      class="sm:col-span-2"
+      formControlName="type"
+      label="Type of expense"
+      [options]="types"
+      error="Choose what the money was spent on"
+      cdkFocusInitial
+    />
+
+    <mat-form-field appearance="outline">
+      <mat-label>Amount</mat-label>
+      <input matInput type="number" min="0" step="0.01" formControlName="amount" />
+      <mat-error>Enter an amount above 0</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Date</mat-label>
+      <input matInput [matDatepicker]="picker" formControlName="incurredAt" />
+      <mat-datepicker-toggle matIconSuffix [for]="picker" />
+      <mat-datepicker #picker />
+      <mat-error>Enter the date as dd/mm/yyyy</mat-error>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="sm:col-span-2">
+      <mat-label>Details</mat-label>
+      <textarea matInput rows="2" maxlength="500" formControlName="description"></textarea>
+      <mat-hint>{{ hint() }}</mat-hint>
+    </mat-form-field>
+  </form>
+
+  <section class="flex flex-col gap-3 pt-4" aria-label="Attachments">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <span class="font-medium">Attachments</span>
+      <button mat-stroked-button type="button" class="attachment-add" (click)="addFiles()" [disabled]="picking()">
+        @if (picking()) {
+          <mat-spinner diameter="18" class="!mr-2" />
+        } @else {
+          <mat-icon>attach_file</mat-icon>
+        }
+        Add photo or PDF
+      </button>
+    </div>
+
+    @if (attachments().length === 0) {
+      <p class="m-0 text-sm opacity-70">No files. Add a photo of the bill or receipt if you have one.</p>
+    } @else {
+      <ul class="list-none m-0 p-0 flex flex-col divide-y divide-outline-variant">
+        @for (item of attachments(); track item.key; let i = $index) {
+          <li class="flex items-center gap-3 py-2">
+            <button
+              type="button"
+              class="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md border border-outline-variant bg-transparent p-0 text-inherit cursor-pointer disabled:cursor-default"
+              (click)="view(item)"
+              [disabled]="!item.isImage && item.id === null"
+              [attr.aria-label]="'View ' + item.fileName"
+            >
+              @if (item.isImage && previews()[item.key]; as src) {
+                <img [src]="src" alt="" class="h-full w-full object-cover" />
+              } @else {
+                <mat-icon>{{ item.isImage ? 'image' : 'picture_as_pdf' }}</mat-icon>
+              }
+            </button>
+            <div class="flex flex-col min-w-0 flex-1">
+              <span class="truncate">{{ item.fileName }}</span>
+              <span class="text-xs opacity-70">
+                {{ formatBytes(item.sizeBytes) }}{{ item.id === null ? ' · not saved yet' : '' }}
+              </span>
+            </div>
+            <button
+              mat-icon-button
+              type="button"
+              class="attachment-remove"
+              (click)="removeAttachment(item, i)"
+              [attr.aria-label]="'Remove ' + item.fileName"
+            >
+              <mat-icon>close</mat-icon>
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="ref.close()" [disabled]="saving()">Cancel</button>
+  <button mat-flat-button color="primary" type="submit" form="expense-form" [disabled]="saving()">
+    @if (saving()) {
+      <mat-spinner diameter="18" class="!mr-2" />
+    }
+    {{ data ? 'Save' : 'Add expense' }}
+  </button>
+</mat-dialog-actions>

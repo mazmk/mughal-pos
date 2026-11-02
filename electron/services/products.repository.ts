@@ -12,8 +12,6 @@ interface ProductRow {
   tax_rate: number;
   image_path: string | null;
   is_active: 0 | 1;
-  stock_on_hand: number;
-  reorder_level: number;
   created_at: string;
   updated_at: string;
 }
@@ -30,8 +28,6 @@ function toProduct(row: ProductRow): Product {
     taxRate: row.tax_rate,
     imagePath: row.image_path,
     isActive: row.is_active,
-    stockOnHand: row.stock_on_hand,
-    reorderLevel: row.reorder_level,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -52,10 +48,7 @@ export const productsRepository = {
     return row ? toProduct(row) : null;
   },
 
-  /**
-   * For anything new: sales, purchases, stock adjustments. Voiding a sale or
-   * receiving a draft purchase skips this, as those finish existing records.
-   */
+  /** For new sales. Voiding a sale skips this, as it finishes an existing record. */
   assertNotDeleted(id: number): void {
     const row = getDatabase()
       .prepare(`SELECT name FROM products WHERE id = ? AND is_deleted = 1`)
@@ -69,9 +62,9 @@ export const productsRepository = {
       .prepare(
         `INSERT INTO products
            (sku, barcode, name, category_id, unit_price, cost_price, tax_rate,
-            image_path, is_active, reorder_level)
+            image_path, is_active)
          VALUES (@sku, @barcode, @name, @categoryId, @unitPrice, @costPrice,
-                 @taxRate, @imagePath, @isActive, @reorderLevel)`
+                 @taxRate, @imagePath, @isActive)`
       )
       .run({
         sku: input.sku,
@@ -83,7 +76,6 @@ export const productsRepository = {
         taxRate: input.taxRate,
         imagePath: input.imagePath,
         isActive: input.isActive,
-        reorderLevel: input.reorderLevel,
       });
 
     const created = this.get(Number(result.lastInsertRowid));
@@ -104,7 +96,6 @@ export const productsRepository = {
       taxRate: 'tax_rate',
       imagePath: 'image_path',
       isActive: 'is_active',
-      reorderLevel: 'reorder_level',
     };
 
     for (const [key, column] of Object.entries(map) as [keyof ProductPatch, string][]) {
@@ -130,7 +121,7 @@ export const productsRepository = {
     return next;
   },
 
-  /** Soft delete: the row stays so sales, purchases and stock history keep their product. */
+  /** Soft delete: the row stays so past sales keep their product. */
   remove(id: number): { id: number } {
     getDatabase()
       .prepare(`UPDATE products SET is_deleted = 1, updated_at = datetime('now') WHERE id = ?`)
@@ -138,15 +129,4 @@ export const productsRepository = {
     return { id };
   },
 
-  lowStock(): Product[] {
-    const rows = getDatabase()
-      .prepare(
-        `SELECT * FROM products
-         WHERE is_active = 1 AND is_deleted = 0
-           AND reorder_level > 0 AND stock_on_hand <= reorder_level
-         ORDER BY (stock_on_hand - reorder_level), name COLLATE NOCASE`
-      )
-      .all() as ProductRow[];
-    return rows.map(toProduct);
-  },
 };

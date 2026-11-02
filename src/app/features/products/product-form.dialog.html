@@ -15,20 +15,15 @@
       <input matInput formControlName="name" maxlength="140" />
       <mat-error>Enter a name</mat-error>
     </mat-form-field>
-    <mat-form-field appearance="outline">
-      <mat-label>Category</mat-label>
-      <mat-select formControlName="categoryId">
-        <mat-option [value]="null">— Uncategorised —</mat-option>
-        @for (c of categories.items(); track c.id) {
-          <mat-option [value]="c.id">{{ c.name }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-    <mat-form-field appearance="outline">
-      <mat-label>Reorder level (Low stock value)</mat-label>
-      <input matInput type="number" min="0" step="1" formControlName="reorderLevel" />
-      <mat-error>Enter 0 or more</mat-error>
-    </mat-form-field>
+    <app-autocomplete-field
+      class="sm:col-span-2"
+      formControlName="categoryId"
+      label="Category"
+      [options]="categoryOptions()"
+      clearable
+      hint="Leave empty for no category"
+      error="Pick a category from the list, or clear the field"
+    />
     <mat-form-field appearance="outline">
       <mat-label>Unit price</mat-label>
       <input matInput type="number" min="0" step="0.01" formControlName="unitPrice" />

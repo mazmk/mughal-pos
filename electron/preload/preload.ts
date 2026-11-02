@@ -24,38 +24,31 @@ const CH = {
   categoriesCreate: 'categories:create',
   categoriesUpdate: 'categories:update',
   categoriesRemove: 'categories:remove',
-  // suppliers
-  suppliersList: 'suppliers:list',
-  suppliersGet: 'suppliers:get',
-  suppliersCreate: 'suppliers:create',
-  suppliersUpdate: 'suppliers:update',
-  suppliersRemove: 'suppliers:remove',
   // products
   productsList: 'products:list',
   productsGet: 'products:get',
   productsCreate: 'products:create',
   productsUpdate: 'products:update',
   productsRemove: 'products:remove',
-  productsLowStock: 'products:low-stock',
-  // stock
-  stockList: 'stock:list',
-  stockAdjust: 'stock:adjust',
-  // purchases
-  purchasesList: 'purchases:list',
-  purchasesGet: 'purchases:get',
-  purchasesCreate: 'purchases:create',
-  purchasesReceive: 'purchases:receive',
-  purchasesCancel: 'purchases:cancel',
   // sales
   salesList: 'sales:list',
   salesGet: 'sales:get',
   salesCreate: 'sales:create',
   salesVoid: 'sales:void',
+  // expenses
+  expensesList: 'expenses:list',
+  expensesCreate: 'expenses:create',
+  expensesUpdate: 'expenses:update',
+  expensesRemove: 'expenses:remove',
+  expensesPickAttachments: 'expenses:pick-attachments',
+  expensesAttachment: 'expenses:attachment',
+  expensesOpenAttachment: 'expenses:open-attachment',
   // dashboard
   dashboardMetrics: 'dashboard:metrics',
   // reports
   reportsSales: 'reports:sales',
   reportsTopProducts: 'reports:top-products',
+  reportsExpensesByType: 'reports:expenses-by-type',
   // backup
   backupCreate: 'backup:create',
   backupList: 'backup:list',
@@ -90,31 +83,12 @@ contextBridge.exposeInMainWorld('api', {
     update: (id: number, patch: unknown) => invoke(CH.categoriesUpdate, id, patch),
     remove: (id: number) => invoke(CH.categoriesRemove, id),
   },
-  suppliers: {
-    list: () => invoke(CH.suppliersList),
-    get: (id: number) => invoke(CH.suppliersGet, id),
-    create: (input: unknown) => invoke(CH.suppliersCreate, input),
-    update: (id: number, patch: unknown) => invoke(CH.suppliersUpdate, id, patch),
-    remove: (id: number) => invoke(CH.suppliersRemove, id),
-  },
   products: {
     list: () => invoke(CH.productsList),
     get: (id: number) => invoke(CH.productsGet, id),
     create: (input: unknown) => invoke(CH.productsCreate, input),
     update: (id: number, patch: unknown) => invoke(CH.productsUpdate, id, patch),
     remove: (id: number) => invoke(CH.productsRemove, id),
-    lowStock: () => invoke(CH.productsLowStock),
-  },
-  stock: {
-    list: (productId?: number) => invoke(CH.stockList, productId),
-    adjust: (input: unknown) => invoke(CH.stockAdjust, input),
-  },
-  purchases: {
-    list: () => invoke(CH.purchasesList),
-    get: (id: number) => invoke(CH.purchasesGet, id),
-    create: (input: unknown) => invoke(CH.purchasesCreate, input),
-    receive: (id: number) => invoke(CH.purchasesReceive, id),
-    cancel: (id: number) => invoke(CH.purchasesCancel, id),
   },
   sales: {
     list: () => invoke(CH.salesList),
@@ -122,12 +96,22 @@ contextBridge.exposeInMainWorld('api', {
     create: (input: unknown) => invoke(CH.salesCreate, input),
     void: (id: number) => invoke(CH.salesVoid, id),
   },
+  expenses: {
+    list: (range: unknown) => invoke(CH.expensesList, range),
+    create: (input: unknown) => invoke(CH.expensesCreate, input),
+    update: (id: number, patch: unknown) => invoke(CH.expensesUpdate, id, patch),
+    remove: (id: number) => invoke(CH.expensesRemove, id),
+    pickAttachments: () => invoke(CH.expensesPickAttachments),
+    attachment: (id: number) => invoke(CH.expensesAttachment, id),
+    openAttachment: (id: number) => invoke(CH.expensesOpenAttachment, id),
+  },
   dashboard: {
     metrics: () => invoke(CH.dashboardMetrics),
   },
   reports: {
     sales: (range: unknown) => invoke(CH.reportsSales, range),
     topProducts: (range: unknown, limit?: number) => invoke(CH.reportsTopProducts, range, limit),
+    expensesByType: (range: unknown) => invoke(CH.reportsExpensesByType, range),
   },
   backup: {
     create: (note?: string | null) => invoke(CH.backupCreate, note ?? null),

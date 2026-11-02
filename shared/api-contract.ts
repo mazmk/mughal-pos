@@ -1,30 +1,29 @@
 import type {
+  AttachmentFile,
   BackupCheck,
   BackupCurrentState,
   BackupInfo,
   Category,
   CategoryPatch,
   DashboardMetrics,
+  DateRange,
+  Expense,
+  ExpensePatch,
+  ExpenseTypeRow,
   HealthStatus,
   IpcResponse,
   NewCategory,
+  NewExpense,
   NewProduct,
-  NewPurchase,
   NewSale,
-  NewStockMovement,
-  NewSupplier,
   Product,
   ProductPatch,
-  Purchase,
   ReportRange,
   ClearShopResult,
   RestoreResult,
   Sale,
   SalesReportRow,
   Setting,
-  StockMovement,
-  Supplier,
-  SupplierPatch,
   TopProductRow,
 } from './ipc-types';
 
@@ -48,31 +47,12 @@ export interface MughalApi {
     update(id: number, patch: CategoryPatch): Promise<IpcResponse<Category>>;
     remove(id: number): Promise<IpcResponse<{ id: number }>>;
   };
-  suppliers: {
-    list(): Promise<IpcResponse<Supplier[]>>;
-    get(id: number): Promise<IpcResponse<Supplier | null>>;
-    create(input: NewSupplier): Promise<IpcResponse<Supplier>>;
-    update(id: number, patch: SupplierPatch): Promise<IpcResponse<Supplier>>;
-    remove(id: number): Promise<IpcResponse<{ id: number }>>;
-  };
   products: {
     list(): Promise<IpcResponse<Product[]>>;
     get(id: number): Promise<IpcResponse<Product | null>>;
     create(input: NewProduct): Promise<IpcResponse<Product>>;
     update(id: number, patch: ProductPatch): Promise<IpcResponse<Product>>;
     remove(id: number): Promise<IpcResponse<{ id: number }>>;
-    lowStock(): Promise<IpcResponse<Product[]>>;
-  };
-  stock: {
-    list(productId?: number): Promise<IpcResponse<StockMovement[]>>;
-    adjust(input: NewStockMovement): Promise<IpcResponse<StockMovement>>;
-  };
-  purchases: {
-    list(): Promise<IpcResponse<Purchase[]>>;
-    get(id: number): Promise<IpcResponse<Purchase | null>>;
-    create(input: NewPurchase): Promise<IpcResponse<Purchase>>;
-    receive(id: number): Promise<IpcResponse<Purchase>>;
-    cancel(id: number): Promise<IpcResponse<Purchase>>;
   };
   sales: {
     list(): Promise<IpcResponse<Sale[]>>;
@@ -80,12 +60,24 @@ export interface MughalApi {
     create(input: NewSale): Promise<IpcResponse<Sale>>;
     void(id: number): Promise<IpcResponse<Sale>>;
   };
+  expenses: {
+    list(range: DateRange): Promise<IpcResponse<Expense[]>>;
+    create(input: NewExpense): Promise<IpcResponse<Expense>>;
+    update(id: number, patch: ExpensePatch): Promise<IpcResponse<Expense>>;
+    remove(id: number): Promise<IpcResponse<{ id: number }>>;
+    /** Opens a file picker and returns the chosen files, ready to save. Empty when cancelled. */
+    pickAttachments(): Promise<IpcResponse<AttachmentFile[]>>;
+    attachment(id: number): Promise<IpcResponse<AttachmentFile>>;
+    /** Opens a saved attachment in the computer's default viewer. */
+    openAttachment(id: number): Promise<IpcResponse<void>>;
+  };
   dashboard: {
     metrics(): Promise<IpcResponse<DashboardMetrics>>;
   };
   reports: {
     sales(range: ReportRange): Promise<IpcResponse<SalesReportRow[]>>;
     topProducts(range: ReportRange, limit?: number): Promise<IpcResponse<TopProductRow[]>>;
+    expensesByType(range: DateRange): Promise<IpcResponse<ExpenseTypeRow[]>>;
   };
   backup: {
     create(note?: string | null): Promise<IpcResponse<BackupInfo>>;

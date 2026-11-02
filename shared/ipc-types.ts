@@ -65,25 +65,6 @@ export type NewCategory = Omit<Category, 'id' | 'createdAt' | 'updatedAt'>;
 export type CategoryPatch = Partial<NewCategory>;
 
 /* -------------------------------------------------------------------------- */
-/*  Suppliers                                                                  */
-/* -------------------------------------------------------------------------- */
-
-export interface Supplier {
-  id: number;
-  name: string;
-  contactName: string | null;
-  phone: string | null;
-  email: string | null;
-  address: string | null;
-  notes: string | null;
-  isActive: 0 | 1;
-  createdAt: string;
-  updatedAt: string;
-}
-export type NewSupplier = Omit<Supplier, 'id' | 'createdAt' | 'updatedAt'>;
-export type SupplierPatch = Partial<NewSupplier>;
-
-/* -------------------------------------------------------------------------- */
 /*  Products                                                                   */
 /* -------------------------------------------------------------------------- */
 
@@ -98,94 +79,12 @@ export interface Product {
   taxRate: number;
   imagePath: string | null;
   isActive: 0 | 1;
-  stockOnHand: number;
-  reorderLevel: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export type NewProduct = Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'stockOnHand'>;
-export type ProductPatch = Partial<Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'stockOnHand'>>;
-
-/* -------------------------------------------------------------------------- */
-/*  Stock                                                                      */
-/* -------------------------------------------------------------------------- */
-
-export type StockMovementReason =
-  | 'opening'
-  | 'sale'
-  | 'restock'
-  | 'damage'
-  | 'adjustment'
-  | 'return';
-
-export interface StockMovement {
-  id: number;
-  productId: number;
-  productName: string;
-  productSku: string;
-  reason: StockMovementReason;
-  quantity: number;
-  unitCost: number | null;
-  referenceType: string | null;
-  referenceId: number | null;
-  note: string | null;
-  occurredAt: string;
-  createdAt: string;
-}
-
-export interface NewStockMovement {
-  productId: number;
-  reason: StockMovementReason;
-  quantity: number;
-  unitCost?: number | null;
-  note?: string | null;
-}
-
-/* -------------------------------------------------------------------------- */
-/*  Purchases                                                                  */
-/* -------------------------------------------------------------------------- */
-
-export type PurchaseStatus = 'draft' | 'received' | 'cancelled';
-
-export interface PurchaseItem {
-  id: number;
-  purchaseId: number;
-  productId: number;
-  productName: string;
-  productSku: string;
-  quantity: number;
-  unitCost: number;
-  lineTotal: number;
-}
-
-export interface Purchase {
-  id: number;
-  supplierId: number | null;
-  supplierName: string | null;
-  reference: string | null;
-  totalAmount: number;
-  status: PurchaseStatus;
-  purchasedAt: string;
-  notes: string | null;
-  createdAt: string;
-  updatedAt: string;
-  items: PurchaseItem[];
-}
-
-export interface NewPurchaseItem {
-  productId: number;
-  quantity: number;
-  unitCost: number;
-}
-
-export interface NewPurchase {
-  supplierId: number | null;
-  reference: string | null;
-  purchasedAt: string;
-  notes: string | null;
-  items: NewPurchaseItem[];
-}
+export type NewProduct = Omit<Product, 'id' | 'createdAt' | 'updatedAt'>;
+export type ProductPatch = Partial<NewProduct>;
 
 /* -------------------------------------------------------------------------- */
 /*  Sales                                                                      */
@@ -238,6 +137,62 @@ export interface NewSale {
 }
 
 /* -------------------------------------------------------------------------- */
+/*  Expenses                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/** utility = bills, stock = buying goods to sell, staff = money a team member took. */
+export type ExpenseType = 'utility' | 'stock' | 'staff' | 'other';
+
+/** Files the shop may attach to an expense. Images are re-encoded as JPEG on the way in. */
+export type AttachmentMimeType = 'image/jpeg' | 'application/pdf';
+
+export interface ExpenseAttachment {
+  id: number;
+  expenseId: number;
+  fileName: string;
+  mimeType: AttachmentMimeType;
+  sizeBytes: number;
+  createdAt: string;
+}
+
+/** An attachment's bytes, base64-encoded so it can cross IPC. */
+export interface AttachmentFile {
+  fileName: string;
+  mimeType: AttachmentMimeType;
+  dataBase64: string;
+}
+
+export interface Expense {
+  id: number;
+  type: ExpenseType;
+  amount: number;
+  description: string | null;
+  incurredAt: string;
+  createdAt: string;
+  updatedAt: string;
+  attachments: ExpenseAttachment[];
+}
+
+export interface NewExpense {
+  type: ExpenseType;
+  amount: number;
+  description: string | null;
+  /** ISO-8601 instant; stored as UTC. */
+  incurredAt: string;
+  addAttachments: AttachmentFile[];
+}
+
+export interface ExpensePatch extends NewExpense {
+  removeAttachmentIds: number[];
+}
+
+/** Inclusive calendar dates, yyyy-mm-dd, on the computer's clock. */
+export interface DateRange {
+  from: string;
+  to: string;
+}
+
+/* -------------------------------------------------------------------------- */
 /*  Dashboard + Reports                                                        */
 /* -------------------------------------------------------------------------- */
 
@@ -245,11 +200,13 @@ export interface DashboardMetrics {
   todaySalesAmount: number;
   todaySalesCount: number;
   todayProfit: number;
+  monthSalesAmount: number;
+  monthProfit: number;
+  /** This month's expenses other than stock bought: what net profit subtracts. */
+  monthExpenses: number;
+  monthNetProfit: number;
   totalProducts: number;
-  lowStockProducts: number;
-  inventoryValue: number;
   activeCategories: number;
-  activeSuppliers: number;
 }
 
 export interface SalesReportRow {
@@ -258,6 +215,19 @@ export interface SalesReportRow {
   totalAmount: number;
   taxAmount: number;
   discountAmount: number;
+  profit: number;
+  /** Money spent buying stock. Already counted in profit via each item's cost. */
+  stockExpenses: number;
+  /** Every other expense type. */
+  otherExpenses: number;
+  /** profit − otherExpenses. */
+  netProfit: number;
+}
+
+export interface ExpenseTypeRow {
+  type: ExpenseType;
+  count: number;
+  amount: number;
 }
 
 export interface TopProductRow {
@@ -297,10 +267,9 @@ export type BackupStatus = 'verified' | 'unverified' | 'damaged';
 export interface BackupCounts {
   products: number;
   categories: number;
-  suppliers: number;
   sales: number;
-  purchases: number;
-  stockMovements: number;
+  /** Missing from manifests written before expenses were tracked. */
+  expenses?: number;
 }
 
 export interface BackupInfo {

@@ -26,37 +26,36 @@ const script = \`(async () => {
     return r.data;
   };
 
-  // 1. Create category + supplier
+  // 1. Create category
   const cat = await unwrap(api.categories.create({ name: 'Snacks', description: null }), 'cat.create');
-  const sup = await unwrap(api.suppliers.create({
-    name: 'Acme Dist', contactName: null, phone: null, email: null,
-    address: null, notes: null, isActive: 1,
-  }), 'sup.create');
 
   // 2. Create product
   const prod = await unwrap(api.products.create({
     sku: 'SMK-001', barcode: null, name: 'Chips',
     categoryId: cat.id, unitPrice: 50, costPrice: 30,
-    taxRate: 0.17, imagePath: null, isActive: 1, reorderLevel: 5,
+    taxRate: 0.17, imagePath: null, isActive: 1,
   }), 'prod.create');
 
-  // 3. Opening stock via adjustment
-  await unwrap(api.stock.adjust({
-    productId: prod.id, reason: 'opening', quantity: 20, note: 'opening',
-  }), 'stock.adjust');
-
-  // 4. Create + receive purchase (restock)
-  const pur = await unwrap(api.purchases.create({
-    supplierId: sup.id, reference: 'PO-TEST', purchasedAt: new Date().toISOString(),
-    notes: null, items: [{ productId: prod.id, quantity: 10, unitCost: 28 }],
-  }), 'pur.create');
-  await unwrap(api.purchases.receive(pur.id), 'pur.receive');
-
-  // 5. Make a sale
+  // 3-4. Stock is not tracked: selling any quantity of a new product works
   const sale = await unwrap(api.sales.create({
     paymentMethod: 'cash', discountAmount: 0, notes: null,
     items: [{ productId: prod.id, quantity: 3, unitPrice: 50, taxRate: 0.17 }],
   }), 'sale.create');
+
+  // 5. Expenses, one with an attached file
+  const jpeg = btoa(String.fromCharCode(0xff, 0xd8, 0xff, 0xe0, 1, 2));
+  const expense = await unwrap(api.expenses.create({
+    type: 'utility', amount: 20, description: 'Gas bill', incurredAt: new Date().toISOString(),
+    addAttachments: [{ fileName: 'bill.png', mimeType: 'image/jpeg', dataBase64: jpeg }],
+  }), 'exp.create');
+  await unwrap(api.expenses.create({
+    type: 'stock', amount: 300, description: null, incurredAt: new Date().toISOString(),
+    addAttachments: [],
+  }), 'exp.create2');
+  const badType = await api.expenses.create({
+    type: 'rent', amount: 1, description: null, incurredAt: new Date().toISOString(), addAttachments: [],
+  });
+  const attachment = await unwrap(api.expenses.attachment(expense.attachments[0].id), 'exp.attachment');
 
   // 6. Dashboard metrics should reflect everything
   const metrics = await unwrap(api.dashboard.metrics(), 'dash');
@@ -66,12 +65,11 @@ const script = \`(async () => {
   const from = new Date(Date.now() - 30*86400_000).toISOString().slice(0,10);
   const salesReport = await unwrap(api.reports.sales({ from, to, granularity: 'day' }), 'rpt.sales');
   const topProducts = await unwrap(api.reports.topProducts({ from, to, granularity: 'day' }, 5), 'rpt.top');
+  const expensesByType = await unwrap(api.reports.expensesByType({ from, to }), 'rpt.expenses');
+  const expenseList = await unwrap(api.expenses.list({ from, to }), 'exp.list');
 
   // 8. Backup
   const backup = await unwrap(api.backup.create(), 'backup.create');
-
-  // 9. Reread product to confirm stock
-  const refreshed = await unwrap(api.products.get(prod.id), 'prod.get');
 
   // 10. Soft delete keeps history, hides the product and frees its SKU
   await unwrap(api.products.remove(prod.id), 'prod.remove');
@@ -81,14 +79,11 @@ const script = \`(async () => {
     paymentMethod: 'cash', discountAmount: 0, notes: null,
     items: [{ productId: prod.id, quantity: 1, unitPrice: 50, taxRate: 0 }],
   });
-  const blockedAdjust = await api.stock.adjust({
-    productId: prod.id, reason: 'restock', quantity: 1, note: null,
-  });
   const voided = await unwrap(api.sales.void(sale.id), 'sale.void');
   const reused = await unwrap(api.products.create({
     sku: 'SMK-001', barcode: null, name: 'Chips v2',
     categoryId: null, unitPrice: 60, costPrice: 40,
-    taxRate: 0, imagePath: null, isActive: 1, reorderLevel: 0,
+    taxRate: 0, imagePath: null, isActive: 1,
   }), 'prod.recreate');
 
   // 11. Clear shop empties every record, keeps backups, and can be undone
@@ -99,7 +94,7 @@ const script = \`(async () => {
   const shopName = await unwrap(api.settings.get('shop.name'), 'settings.get');
   const firstProduct = await unwrap(api.products.create({
     sku: 'NEW-001', barcode: null, name: 'First', categoryId: null, unitPrice: 1,
-    costPrice: 1, taxRate: 0, imagePath: null, isActive: 1, reorderLevel: 0,
+    costPrice: 1, taxRate: 0, imagePath: null, isActive: 1,
   }), 'prod.afterClear');
   await unwrap(api.backup.restore(cleared.safetyBackup.filename), 'restore');
   const undone = await unwrap(api.backup.current(), 'backup.current2');
@@ -109,7 +104,6 @@ const script = \`(async () => {
       hidden: !listAfterDelete.some((p) => p.id === prod.id),
       historyName: saleAfterDelete.items[0].productName,
       saleBlocked: !blockedSale.ok,
-      adjustBlocked: !blockedAdjust.ok,
       voidStatus: voided.status,
       reusedSku: reused.sku,
     },
@@ -121,7 +115,13 @@ const script = \`(async () => {
       firstProductId: firstProduct.id,
       undone: undone.counts,
     },
-    stockAfter: refreshed.stockOnHand,
+    expenses: {
+      listed: expenseList.length,
+      byType: expensesByType,
+      badTypeRejected: !badType.ok,
+      attachmentName: attachment.fileName,
+      attachmentIntact: attachment.dataBase64 === jpeg,
+    },
     saleRef: sale.reference,
     saleTotal: sale.totalAmount,
     metrics,
@@ -145,8 +145,12 @@ app.whenReady().then(async () => {
     const result = await win.webContents.executeJavaScript(script);
     console.log('[probe] result:', result);
     const d = JSON.parse(result);
-    const expectedStock = 20 + 10 - 3; // 27
-    if (d.stockAfter !== expectedStock) throw new Error('stock mismatch: ' + d.stockAfter);
+    const e = d.expenses;
+    if (e.listed !== 2 || e.byType.length !== 2) throw new Error('expenses: ' + JSON.stringify(e));
+    if (!e.badTypeRejected) throw new Error('unknown expense type accepted');
+    if (e.attachmentName !== 'bill.jpg' || !e.attachmentIntact) throw new Error('attachment: ' + JSON.stringify(e));
+    // profit 3 × (50 − 30) = 60, less the 20 bill; the 300 of stock bought is not subtracted
+    if (d.metrics.monthNetProfit !== 40) throw new Error('net profit: ' + d.metrics.monthNetProfit);
     if (d.metrics.todaySalesCount !== 1) throw new Error('metrics salesCount: ' + d.metrics.todaySalesCount);
     if (d.metrics.totalProducts < 1) throw new Error('no products in metrics');
     if (!d.saleRef.startsWith('S-')) throw new Error('bad sale ref: ' + d.saleRef);
@@ -156,7 +160,7 @@ app.whenReady().then(async () => {
     const sd = d.softDelete;
     if (!sd.hidden) throw new Error('deleted product still listed');
     if (sd.historyName !== 'Chips') throw new Error('sale lost its product: ' + sd.historyName);
-    if (!sd.saleBlocked || !sd.adjustBlocked) throw new Error('deleted product was usable');
+    if (!sd.saleBlocked) throw new Error('deleted product was usable');
     if (sd.voidStatus !== 'voided') throw new Error('could not void sale of deleted product');
     if (sd.reusedSku !== 'SMK-001') throw new Error('SKU not reusable');
     const c = d.clear;

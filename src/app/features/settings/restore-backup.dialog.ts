@@ -26,10 +26,8 @@ const CONFIRM_WORD = 'RESTORE';
 const COUNT_ROWS: readonly { key: keyof BackupCounts; label: string }[] = [
   { key: 'products', label: 'Products' },
   { key: 'categories', label: 'Categories' },
-  { key: 'suppliers', label: 'Suppliers' },
   { key: 'sales', label: 'Sales' },
-  { key: 'purchases', label: 'Purchases' },
-  { key: 'stockMovements', label: 'Stock movements' },
+  { key: 'expenses', label: 'Expenses' },
 ];
 
 type Step = 'confirm' | 'restoring' | 'done' | 'error';
@@ -64,7 +62,7 @@ type Step = 'confirm' | 'restoring' | 'done' | 'error';
                 <span>
                   The shop goes back to how it was on
                   <strong>{{ data.backup.createdAt | appDate: 'datetime-seconds' }}</strong>. Anything entered
-                  after that (sales, stock, products) will no longer appear.
+                  after that (sales, expenses, products) will no longer appear.
                 </span>
               </div>
             </div>
@@ -201,11 +199,11 @@ export class RestoreBackupDialog {
   }
 
   currentCount(key: keyof BackupCounts): string {
-    return this.data.current ? String(this.data.current.counts[key]) : '—';
+    return String(this.data.current?.counts[key] ?? '—');
   }
 
   backupCount(key: keyof BackupCounts): string {
-    return this.data.backup.counts ? String(this.data.backup.counts[key]) : '—';
+    return String(this.data.backup.counts?.[key] ?? '—');
   }
 
   /** Highlights rows where restoring would leave fewer records than today. */

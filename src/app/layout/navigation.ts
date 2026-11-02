@@ -9,11 +9,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: 'POS', icon: 'point_of_sale', route: '/pos' },
   { label: 'Products', icon: 'inventory_2', route: '/products' },
   { label: 'Categories', icon: 'category', route: '/categories' },
-  { label: 'Inventory', icon: 'warehouse', route: '/inventory' },
-  { label: 'Stock Movements', icon: 'swap_vert', route: '/stock' },
-  { label: 'Suppliers', icon: 'local_shipping', route: '/suppliers' },
-  { label: 'Purchases', icon: 'shopping_cart_checkout', route: '/purchases' },
   { label: 'Sales', icon: 'receipt_long', route: '/sales' },
+  { label: 'Expenses', icon: 'request_quote', route: '/expenses' },
   { label: 'Reports', icon: 'analytics', route: '/reports' },
   { label: 'Settings', icon: 'settings', route: '/settings' },
 ];
