@@ -28,7 +28,10 @@ mac:
   minimumSystemVersion: '11.0'
   hardenedRuntime: false
   gatekeeperAssess: false
+  # No Developer ID: electron-builder skips signing, and scripts/mac-adhoc-sign.js
+  # (afterPack) ad-hoc signs instead so downloaded copies aren't "damaged".
   identity: null
+afterPack: scripts/mac-adhoc-sign.js
 win:
   icon: build/icon.ico
   target:
